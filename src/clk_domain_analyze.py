@@ -1,5 +1,4 @@
 import device_resource
-from clk_domain_check import extract_clk_domains
 from mmcm_fac_calc import mmcm_multi_calc_fac
 from pll_fac_calc import pll_calc_fac
 
@@ -141,19 +140,9 @@ def clk_resource_cal(domains):
     # clk_map is used to generate some BUFs
     # domains is used to generate PLL
     clk_map_mux, domains =  bufgce_mux_cal(domains, 1)
-    print("clk_map_mux:",clk_map_mux)
     clk_map_bypass, domains = bypass_cal(domains)
-    print("clk_map_bypass:",clk_map_bypass)
     clk_map_div, domains =  bufgce_div_cal(domains)
-    print("clk_map_div:",clk_map_div)
-    print("domains:",domains)
     clk_map_mmcm = pll_mmcm_cal(domains)
-    print("clk_map_mmcm:",clk_map_mmcm)
 
     return clk_map_mux, clk_map_bypass, clk_map_div, clk_map_mmcm
-
-
-domains, modules = extract_clk_domains("a.txt")
-print(domains)
-clk_map_mux, clk_map_bypass, clk_map_div, clk_map_mmcm = clk_resource_cal(domains)
 
