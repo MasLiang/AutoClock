@@ -7,7 +7,7 @@ def mmcm_calc_first_factor(in_period, out_period):
         for mult_fac_all in range(16,512+1): # 2~64, stride is 0.125
             for div_fac_clk in range(1,128+1):
                 if((out_period * (mult_fac_all/8) / div_fac_all / div_fac_clk)==in_period):
-                    lst_fac.append([div_fac_all, (mult_fac_all/8), [div_fac_clk]])
+                    lst_fac.append([div_fac_all, (mult_fac_all/8), div_fac_clk])
     return lst_fac
 
 def mmcm_calc_later_factor(in_period, out_period, lst_factor):
@@ -17,7 +17,7 @@ def mmcm_calc_later_factor(in_period, out_period, lst_factor):
     for fac_grp in lst_factor:
         for div_fac_clk in range(1,128+1):
             if((out_period * fac_grp[1] / fac_grp[0] / div_fac_clk)==in_period):
-                selected_lst_factor.append([fac_grp[0], fac_grp[1],fac_grp[2]+[div_fac_clk]])
+                selected_lst_factor.append([fac_grp[0], fac_grp[1]]+fac_grp[2:]+[div_fac_clk])
                 continue
     
     return selected_lst_factor

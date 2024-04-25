@@ -1,5 +1,3 @@
-from pll_fac_calc import calc_fac
-
 def gen_plle4_file(module_name, factors):
 
     clkin_period = factors[0]
@@ -145,11 +143,3 @@ def gen_plle4_inst(module_name, factors):
 
     return [lst_wire, lst_inst]
 		
-# test
-lst_factor = calc_fac(100000, [50000, 30000], 2)
-clkin_period = 1000000/100000
-print(lst_factor)
-
-lst_inst = gen_plle4_inst("aaaa", clkin_period, [2, lst_factor[0], lst_factor[1], lst_factor[2][0], lst_factor[2][1]])
-for i in lst_inst:
-	print(i)

@@ -1934,7 +1934,8 @@ void rwkv_top(float* x_, float* xx, float* xx_ffn, float* aa, float* bb, float* 
 	hls::stream<t_floatVec_0> output_;
 	#pragma HLS stream variable=output_ depth=256
 	#pragma HLS dataflow
-	#pragma HLS clkdomain clk1 10 5 3
+	#pragma HLS clkdomain clk1 10 5
+	#pragma HLS clksel clk1 sel 
 	read_all(state_in, weight_block, x, x_, xx, xx_ffn, aa, bb, pp, ln1_weight, ln1_bias, ln2_weight, ln2_bias, att_r_weight, att_k_weight, att_v_weight, att_o_weight, att_time_mix_k, att_time_mix_v, att_time_mix_r, att_time_first, att_time_decay, att_r_vec_mr, att_r_vec_mk, att_r_vec_mv, att_r_vec_mo, ffn_r_weight, ffn_k_weight, ffn_v_weight, ffn_time_mix_k, ffn_time_mix_r, ffn_r_vec_mr, ffn_r_vec_mk, ffn_r_vec_mv);
 	#pragma HLS clkdomain clk2 2
 	layer_common_s(state_in,state_out, weight_block, x, output_);

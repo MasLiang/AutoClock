@@ -82,9 +82,23 @@ def bufgce_mux_cal(domains, u50_flg):
                 return # TODO
                                 
 
+    # for calculation later, strings are converted to float
     for domain in list(domains.keys()):
         domains[domain] = float(domains[domain])
-
+    
+    # Since there are only 2 input pins of a MUX, mux with more than
+    #  2 input should be divided.
+    for mux in list(clk_map.keys()):
+        mux_clk = clk_map[mux][1]
+        while(len(mux_clk)>1):
+            mux_clk1 = mux_clk.pop()
+            mux_clk2 = mux_clk.pop()
+            mux_out = mux_clk2+"_temp"
+            mux_clk.append(mux_out)
+            clk_map[mux_out] = ["bufgce_mux", [mux_clk1, mux_clk2]] 
+        clk_map[mux] = clk_map[mux_out]
+        del clk_map[mux_out]
+        
     return clk_map, domains
     
 def bypass_cal(domains):
@@ -129,8 +143,8 @@ def pll_mmcm_cal(domains):
             pll_recal_period_list = []
             for domain in mmcm_caled_domain_lst:
                 pll_recal_period_list.append(domains[domain])
-            pll_fac = pll_calc_fac(domains[src_clk], pll_recal_domain_dict)
-            if(pll_map!=[]):
+            pll_fac = pll_calc_fac(domains[src_clk], pll_recal_period_list, len(mmcm_caled_domain_lst))
+            if(pll_fac!=[]):
                 mmcm_map[src_clk][mmcm_idx][0] = "pll"
                 mmcm_map[src_clk][mmcm_idx][2] = pll_fac
 

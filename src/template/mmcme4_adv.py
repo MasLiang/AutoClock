@@ -235,46 +235,34 @@ def gen_mmcme4_inst(module_name, factors):
     lst_wire = []
     lst_inst.append(module_name+"_wrapper "+module_name+"(")
     lst_wire.append("wire	"+module_name+"_clk_out0;")
-    lst_inst.append("   .clk_out0("+module_name+"_clk_out0),")
+    lst_inst.append("   .clk_out0   ("+module_name+"_clk_out0),")
     if(clkout_num>1):
-        lst_inst.append("   .clk_out1("+module_name+"_clk_out1),")
+        lst_inst.append("   .clk_out1   ("+module_name+"_clk_out1),")
         lst_wire.append("wire	"+module_name+"_clk_out1;")
     if(clkout_num>2):
-        lst_inst.append("   .clk_out2("+module_name+"_clk_out2),")
+        lst_inst.append("   .clk_out2   ("+module_name+"_clk_out2),")
         lst_wire.append("wire	"+module_name+"_clk_out2;")
     if(clkout_num>3):
-        lst_inst.append("   .clk_out3("+module_name+"_clk_out3),")
+        lst_inst.append("   .clk_out3   ("+module_name+"_clk_out3),")
         lst_wire.append("wire	"+module_name+"_clk_out3;")
     if(clkout_num>4):
-        lst_inst.append("   .clk_out4("+module_name+"_clk_out4),")
+        lst_inst.append("   .clk_out4   ("+module_name+"_clk_out4),")
         lst_wire.append("wire	"+module_name+"_clk_out4;")
     if(clkout_num>5):
-        lst_inst.append("   .clk_out5("+module_name+"_clk_out5),")
+        lst_inst.append("   .clk_out5   ("+module_name+"_clk_out5),")
         lst_wire.append("wire	"+module_name+"_clk_out5;")
     if(clkout_num>6):
-        lst_inst.append("   .clk_out6("+module_name+"_clk_out6),")
+        lst_inst.append("   .clk_out6   ("+module_name+"_clk_out6),")
         lst_wire.append("wire	"+module_name+"_clk_out6;")
     lst_wire.append("wire	"+module_name+"_clk_in0;")
-    lst_inst.append("   .clk_in0(clk_in0)")
+    lst_inst.append("   .clk_in0    ("+module_name+"_clk_in0)")
     if(clkin_num>1):
         lst_wire.append("wire	"+module_name+"_clk_in1;")
-        lst_inst.append("   .clk_in1(clk_in1)")
+        lst_inst.append("   .clk_in1    (clk_in1)")
     lst_wire.append("wire	"+module_name+"_reset;")
-    lst_inst.append("   .reset(reset),")
+    lst_inst.append("   .reset      ("+module_name+"_reset),")
     lst_wire.append("wire	"+module_name+"_locked;")
-    lst_inst.append("   .locked(locked));")
+    lst_inst.append("   .locked     ("+module_name+"_locked));")
     
     return [lst_wire, lst_inst]
 		
-## test
-#domains = {"src_clk":10, "clk1":5, "clk2":3, "clk3":19}
-#lst_factor = mmcm_multi_calc_fac(domains)
-#clkin_period = domains["src_clk"]
-#print(lst_factor)
-#
-#factors = [clkin_period, 3]+lst_factor["src_clk"][0][2][0:1]+lst_factor["src_clk"][0][2][2]
-#while (len(factors)<12):
-#    factors.append(0)
-#lst_inst = gen_mmcme4_inst("aaaa", factors)
-#for i in lst_inst:
-#    print(i)
