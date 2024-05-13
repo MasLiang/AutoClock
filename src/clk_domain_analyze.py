@@ -101,6 +101,17 @@ def bufgce_mux_cal(domains, u50_flg):
         
     return clk_map, domains
     
+def check_mux_if(domains_sel_if):
+    # This function is to check the clk mux interface signals
+    #   the type must by ap_none, no matter what the user defined
+    #   type is. If user defined other type, change it.
+    #   find the clk domain -> 
+    #   find the interface ->
+    #   find the pragma -> 
+    #   if not true, change, if no, add
+    
+     
+                
 def bypass_cal(domains):
     # This function is to find clocks with the same period.
     
@@ -149,7 +160,7 @@ def pll_mmcm_cal(domains):
                 mmcm_map[src_clk][mmcm_idx][2] = pll_fac
 
     return mmcm_map
-                
+
 def clk_resource_cal(domains):
     # clk_map is used to generate some BUFs
     # domains is used to generate PLL
