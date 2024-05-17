@@ -4,11 +4,12 @@ from template.plle4_adv import *
 from template.bufgmux import *
 from template.bufgce_div import *
 from template.rst_sync import *
+from template.bufgce import *
 from clk_domain_analyze import clk_resource_cal
 from clk_domain_check import extract_clk_domains
 
 def crg_gen(file):
-    modules, domains, domains_sel_if = extract_clk_domains(file)
+    modules, domains, domains_sel_if, domains_gce_if = extract_clk_domains(file)
     clk_map_mux, clk_map_bypass, clk_map_div, clk_map_mmcm = clk_resource_cal(domains)
     
     lst_port = []
@@ -23,6 +24,8 @@ def crg_gen(file):
     lst_bufgmux_inst = []
     lst_rst_sync_wire = []
     lst_rst_sync_inst = []
+    lst_bufgce_wire = []
+    lst_bufgce_inst = []
 
     top_module = list(modules.keys())[0]
     lst_clk = list(domains.keys())
@@ -34,6 +37,7 @@ def crg_gen(file):
     print("clk_map_mmcm" , clk_map_mmcm)
     print("modules:", modules)
     print("sel_if:", domains_sel_if)
+    print("gce_if:", domains_gce_if)
     print("domains:", domains)
     
     # generate mmcm or pll to generate clks in domains
@@ -153,8 +157,11 @@ def crg_gen(file):
     lst_port.append(f'''module {top_module}_crg{'{'}''')
     for clk in lst_clk[1:]:
         if clk in domains_sel_if :
-            lst_port.append("   input       "+clk+"_"+domains_sel_if[clk]+",")
-            lst_assign.append(f'''{'assign    mux_'+clk+'_sel':<40}=    {clk}_{domains_sel_if[clk]};''')
+            lst_port.append("   input       "+clk+"_"+domains_sel_if[clk][0]+",")
+            lst_assign.append(f'''{'assign    mux_'+clk+'_sel':<40}=    {clk}_{domains_sel_if[clk][0]};''')
+        if clk in domains_gce_if :
+            lst_port.append("   input       "+clk+"_"+domains_gce_if[clk][0]+",")
+            lst_assign.append(f'''{'assign    bufgce_'+clk+'_gce':<40}=    {clk}_{domains_gce_if[clk][0]};''')
         lst_port.append("   output      "+clk+",")
         lst_port.append("   output      rst_n_"+clk+",")
     lst_port.append("\n")
@@ -168,21 +175,49 @@ def crg_gen(file):
         if(clk==src_clk):
             continue
         if clk in clk_map_mux:
-            lst_assign.append(f'''{'assign    '+clk:<40}=    mux_{clk}_clk_out;''')
+            if clk in domains_gce_if:
+                lst_assign.append(f'''{'assign    '+clk:<40}=    bufgce_{clk}_clk_out;''')
+                lst_assign.append(f'''{'assign    bufgce_'+clk+"_clk_in":<40}=    mux_{clk}_clk_out;''')
+                lst_bufgce = gen_bufgce("bufgce_"+clk)
+                lst_bufgce_wire += lst_bufgce[0]
+                lst_bufgce_inst += lst_bufgce[1]
+            else:
+                lst_assign.append(f'''{'assign    '+clk:<40}=    mux_{clk}_clk_out;''')
+                
         if clk in clk_map_div:
-            lst_assign.append(f'''{'assign    '+clk:<40}=    div_{clk}_o;''')
+            if clk in domains_gce_if:
+                lst_assign.append(f'''{'assign    '+clk:<40}=    bufgce_{clk}_clk_out;''')
+                lst_assign.append(f'''{'assign    bufgce_'+clk+'_clk_in':<40}=    div_{clk}_o;''')
+                lst_bufgce = gen_bufgce("bufgce_"+clk)
+                lst_bufgce_wire += lst_bufgce[0]
+                lst_bufgce_inst += lst_bufgce[1]
+            else:
+                lst_assign.append(f'''{'assign    '+clk:<40}=    div_{clk}_o;''')
         for pll_mmcm_idx in range(len(clk_map_mmcm[src_clk])):
             if(clk_map_mmcm[src_clk][pll_mmcm_idx][0]=="mmcm"):
                 outlst_mmcm = clk_map_mmcm[src_clk][pll_mmcm_idx][1]
                 for clk_idx in range(len(outlst_mmcm)):
                     if outlst_mmcm[clk_idx]==clk:
-                        lst_assign.append(f'''{'assign    '+clk:<40}=    mmcm{str(pll_mmcm_idx)}_clk_out{str(clk_idx)};''')
-                        continue
+                        if clk in domains_gce_if:
+                            lst_assign.append(f'''{'assign    '+clk:<40}=    bufgce_{clk}_clk_out;''')
+                            lst_assign.append(f'''{'assign    bufgce_'+clk+'_clk_in':<40}=    mmcm{str(pll_mmcm_idx)}_clk_out{str(clk_idx)};''')
+                            lst_bufgce = gen_bufgce("bufgce_"+clk)
+                            lst_bufgce_wire += lst_bufgce[0]
+                            lst_bufgce_inst += lst_bufgce[1]
+                        else:
+                            lst_assign.append(f'''{'assign    '+clk:<40}=    mmcm{str(pll_mmcm_idx)}_clk_out{str(clk_idx)};''')
             elif(clk_map_mmcm[src_clk][pll_mmcm_idx][0]=="pll"):
                 outlst_pll = clk_map_mmcm[src_clk][pll_mmcm_idx][1]
                 for clk_idx in range(len(outlst_pll)):
                     if outlst_pll[clk_idx]==clk:
-                        lst_assign.append(f'''{'assign    '+clk:<40}=    pll{str(pll_mmcm_idx)}_clk_out{str(clk_idx)};''')
+                        if clk in domains_gce_if:
+                            lst_assign.append(f'''{'assign    '+clk:<40}=    bufgce_{clk}_clk_out;''')
+                            lst_assign.append(f'''{'assign    bufgce_'+clk+'_clk_in':<40}=    pll{str(pll_mmcm_idx)}_clk_out{str(clk_idx)};''')
+                            lst_bufgce = gen_bufgce("bufgce_"+clk)
+                            lst_bufgce_wire += lst_bufgce[0]
+                            lst_bufgce_inst += lst_bufgce[1]
+                        else:
+                            lst_assign.append(f'''{'assign    '+clk:<40}=    pll{str(pll_mmcm_idx)}_clk_out{str(clk_idx)};''')
         # rst sync gen
         lst_rst_sync = gen_rstsync(clk)
         lst_rst_sync_wire += lst_rst_sync[0]
@@ -196,8 +231,8 @@ def crg_gen(file):
             
 
 
-    lst_wire = lst_mmcm_wire + ["\n"] + lst_pll_wire + ["\n"] +lst_bufgdiv_wire + ["\n"] +lst_bufgmux_wire + ["\n"] + lst_rst_sync_wire
-    lst_inst = lst_mmcm_inst + ["\n"] + lst_pll_inst + ["\n"] +lst_bufgdiv_inst + ["\n"] +lst_bufgmux_inst + ["\n"] + lst_rst_sync_inst
+    lst_wire = lst_mmcm_wire + ["\n"] + lst_pll_wire + ["\n"] +lst_bufgdiv_wire + ["\n"] +lst_bufgmux_wire + ["\n"] + lst_bufgce_wire + ["\n"] + lst_rst_sync_wire 
+    lst_inst = lst_mmcm_inst + ["\n"] + lst_pll_inst + ["\n"] +lst_bufgdiv_inst + ["\n"] +lst_bufgmux_inst + ["\n"] + lst_bufgce_inst + ["\n"] + lst_rst_sync_inst
     lst_wfile = lst_port + ["\n"] + lst_wire + ["\n"] + lst_inst + ["\n"] + lst_assign
 
     with open(top_module+"_crg.v", "w") as f:
@@ -208,4 +243,4 @@ def crg_gen(file):
 
         
 
-crg_gen("a.txt")
+crg_gen("example.c")

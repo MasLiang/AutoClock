@@ -1,7 +1,8 @@
-module rwkv_top_crg{
+module example_crg{
    input       clk1_sel,
    output      clk1,
    output      rst_n_clk1,
+   input       clk2_cen,
    output      clk2,
    output      rst_n_clk2,
    output      clk3,
@@ -29,6 +30,10 @@ wire	mux_clk1_clk_in_0;
 wire	mux_clk1_clk_in_1;
 wire	mux_clk1_clk_out;
 wire	mux_clk1_sel;
+
+wire	bufgce_clk2_clk_in;
+wire	bufgce_clk2_clk_out;
+wire	bufgce_clk2_gce;
 
 wire    clk1_dest_arst;
 wire    clk1_src_arst;
@@ -68,6 +73,11 @@ BUFGMUX mux_clk1(
 	.S		(mux_clk1_sel));
 
 
+BUFGCE bufgce_clk2(
+	.I			(bufgce_clk2_clk_in),
+	.O			(bufgce_clk2_clk_out),
+	.CE			(bufgce_clk2_gce));
+
 xpm_cdc_async_rst #(
    .DEST_SYNC_FF       (2),
    .INIT_SYNC_FF       (0),
@@ -99,11 +109,13 @@ xpm_cdc_async_rst #(
 );
 
 
+assign    bufgce_clk2_clk_in            =    pll0_clk_out0;
+assign    bufgce_clk2_gce               =    clk2_cen;
 assign    clk1                          =    mux_clk1_clk_out;
 assign    clk1_0                        =    clk_src;
 assign    clk1_dest_clk                 =    clk1;
 assign    clk1_src_arst                 =    rst_n;
-assign    clk2                          =    pll0_clk_out0;
+assign    clk2                          =    bufgce_clk2_clk_out;
 assign    clk2_dest_clk                 =    clk2;
 assign    clk2_src_arst                 =    rst_n;
 assign    clk3                          =    div_clk3_o;

@@ -5,10 +5,12 @@ def extract_clk_domains(file_path):
     periods = []
     modules = []
     domains_sel_if = {}
+    domains_gce_if = {}
 
     # extract HLS pragma
     domain_pattern = r'\s*#pragma \s*HLS \s*clkdomain \s*(\w+(?:_\w+)*)\s*(\d+(?:\s+\d+)*)'
     sel_pattern = r'\s*#pragma\s*HLS\s*clksel\s*(\w+)\s*(\w+)'
+    gce_pattern = r'\s*#pragma\s*HLS\s*clken\s*(\w+)\s*(\w+)'
     with open(file_path, 'r') as file:
         for line in file:
             # remove comment lines
@@ -26,9 +28,13 @@ def extract_clk_domains(file_path):
 				
                 next_line = file.readline()
                 # extract the interface signel used for clk mux
-                match = re.match(sel_pattern, next_line)
-                if match:
-                    domains_sel_if[match.group(1)] = match.group(2)
+                match_mux = re.match(sel_pattern, next_line)
+                if match_mux:
+                    domains_sel_if[match_mux.group(1)] = [match_mux.group(2)]
+                # extract the interface signel used for clk en
+                match_gce = re.match(gce_pattern, next_line)
+                if match_gce:
+                    domains_gce_if[match_gce.group(1)] = [match_gce.group(2)]
                 # check the function name
                 while next_line.strip() == "" or re.match(r"\s*#pragma \s*HLS*",next_line):
                     next_line = file.readline()
@@ -36,12 +42,19 @@ def extract_clk_domains(file_path):
                 if module_match:
                     module = module_match.group(1)
                     modules.append(module)
+                    if match_mux:
+                        domains_sel_if[match_mux.group(1)].append(module)
+                    if match_gce:
+                        domains_gce_if[match_gce.group(1)].append(module)
                 else:
                     modules.append("Unknown")
 
         domains, modules = clk_domains_map(clk_domains, periods, modules)
+    
+    check_mux_gce_if(domains_sel_if, file_path)
+    check_mux_gce_if(domains_gce_if, file_path)
 
-    return modules, domains, domains_sel_if
+    return modules, domains, domains_sel_if, domains_gce_if
 
 def clk_domains_map(clk_domains, periods, modules):
     num_domains = len(clk_domains)
@@ -55,3 +68,48 @@ def clk_domains_map(clk_domains, periods, modules):
 
     return clk_period_map, module_clk_map
         
+def check_mux_gce_if(domains_if, file_path):
+    # This function is to check the clk mux/gce interface signals
+    #   the type must by ap_none, no matter what the user defined
+    #   type is. If user defined other type, change it.
+    #   find the clk domain -> 
+    #   find the interface ->
+    #   find the pragma -> 
+    #   if not true, change, if no, add
+    
+    with open(file_path, 'r') as f:
+        code = f.read()
+
+    # code = re.sub(r'//.*?$|/\*[\s\S]*?\*/', '', code, flags=re.MULTILINE)
+    
+    lst_domain_sel = list(domains_if.keys())
+
+    for domain in lst_domain_sel:
+        module = domains_if[domain][1] 
+        signal = domains_if[domain][0] 
+        func_def_pattern = r'\b[\w\s*]+\b\s+'+re.escape(module)+r'\b\s*\([^\)]*\)\s*\{[^}]*\}'
+        print(module)
+        func = re.search(func_def_pattern, code, re.DOTALL)
+        # replace incorrect pragma
+        func_content = func.group(0)
+        replacement = "\n    #pragma HLS INTERFACE ap_none port={}".format(re.escape(signal))
+        if_pragma_pattern = r"\s*#pragma\s+HLS\s+INTERFACE\s+(\w+)\s+port\s*=\s*{}\b".format(re.escape(signal))
+        new_func_content = re.sub(if_pragma_pattern, replacement, func_content)
+        pragma = re.search(if_pragma_pattern, func_content, re.DOTALL)
+        if pragma:
+            # replace new function
+            code = code.replace(func_content, new_func_content)
+        else:
+            # if no this pragma, insert a new line into it.
+            func_name_pattern = r'\b[\w\s*]+\b\s+'+re.escape(module)+r'\b\s*\([^\)]*\)\s*\{'
+            func_name_match = re.search(func_name_pattern, new_func_content)
+            func_name_loc = func_name_match.end()
+            new_func_content = new_func_content[:func_name_loc]+replacement+"\n"+new_func_content[func_name_loc:]
+            # replace new function
+            code = code.replace(func_content, new_func_content)
+        
+                
+        
+    with open(file_path, 'w') as file:
+        file.write(code)
+                

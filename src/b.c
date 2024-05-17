@@ -1,19 +1,4 @@
-/*
- * Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
- * Copyright 2022-2023 Advanced Micro Devices, Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+
 #include "rwkv_top.hpp"
 
 
@@ -137,12 +122,12 @@ float abs_val(float x) {
     return x < 0 ? -x : x;
 }
 
-// Function to find max absolute value
+
 float find_max_abs_32(float a1, float a2, float a3, float a4, float a5, float a6, float a7, float a8,
                    float b1, float b2, float b3, float b4, float b5, float b6, float b7, float b8,
                    float c1, float c2, float c3, float c4, float c5, float c6, float c7, float c8,
                    float d1, float d2, float d3, float d4, float d5, float d6, float d7, float d8) {
-// Stage 1
+
 	float max1 = abs_val(a1) > abs_val(a2) ? abs_val(a1) : abs_val(a2);
 	float max2 = abs_val(a3) > abs_val(a4) ? abs_val(a3) : abs_val(a4);
 	float max3 = abs_val(a5) > abs_val(a6) ? abs_val(a5) : abs_val(a6);
@@ -162,7 +147,7 @@ float find_max_abs_32(float a1, float a2, float a3, float a4, float a5, float a6
 	float max14 = abs_val(d3) > abs_val(d4) ? abs_val(d3) : abs_val(d4);
 	float max15 = abs_val(d5) > abs_val(d6) ? abs_val(d5) : abs_val(d6);
 	float max16 = abs_val(d7) > abs_val(d8) ? abs_val(d7) : abs_val(d8);
-// Stage 2
+
     float max17 = max1 > max2 ? max1 : max2;
     float max18 = max3 > max4 ? max3 : max4;
     float max19 = max5 > max6 ? max5 : max6;
@@ -172,122 +157,122 @@ float find_max_abs_32(float a1, float a2, float a3, float a4, float a5, float a6
     float max23 = max13 > max14 ? max13 : max14;
     float max24 = max15 > max16 ? max15 : max16;
 
-    // Stage 3
+    
     float max25 = max17 > max18 ? max17 : max18;
     float max26 = max19 > max20 ? max19 : max20;
     float max27 = max21 > max22 ? max21 : max22;
     float max28 = max23 > max24 ? max23 : max24;
 
-    // Stage 4
+    
     float max29 = max25 > max26 ? max25 : max26;
     float max30 = max27 > max28 ? max27 : max28;
 
-    // Stage 5
+    
     return max29 > max30 ? max29 : max30;
 }
 
-// void chunk_wise_average(t_floatVec& v, float& avg){
-// 	t_chunk_vector avg_vet_floatVec_0c = 0;
-// 	for(int i = 0; i < AVG_CHUNK_NUM; i++){
-// 		#pragma hls unroll factor=16 skip_exit_check
-// 		for(int j = 0; j < AVG_CHUNK_SIZE; j++){
-// 			#pragma hls unroll factor=16 skip_exit_check
-// 			avg_vec[i] += v[i * AVG_CHUNK_SIZE + j];
-// 		}
-// 		avg_vec[i] /= AVG_CHUNK_SIZE;
-// 	}
-// 	avg = 0;
-// 	for(int i = 0; i < AVG_CHUNK_NUM; i++){
-// 		#pragma hls unroll factor=16 skip_exit_check
-// 		avg += avg_vec[i];
-// 	}
-// 	avg /= AVG_CHUNK_NUM;
-// }
 
 
-// void square_vector(t_floatVec& v, t_floatVec& output){
-// 	for(int i = 0; i < n_embed; i++){
-// 		#pragma hls unroll factor=16 skip_exit_check
-// 		output[i] = v[i] * v[i];
-// 	}
-// }
 
-// void Layer_Norm_vector(t_floatVec& v, t_floatVec& w, t_floatVec& b, t_floatVec& output){
-// 	float E_v;
-// 	float E_v_2;
-// 	t_floatVec v_2;
-// 	chunk_wise_average(v, E_v);
-// 	square_vector(v, v_2);
-// 	chunk_wise_average(v_2, E_v_2);
-// 	float var = E_v_2 - E_v * E_v;
-// 	for(int i = 0; i < n_embed; i++){
-// 		#pragma hls unroll factor=16 skip_exit_check
-// 		output[i] = (output[i] - E_v) / sqrt(var + epsilon);
-// 	}
-// 	output = output * w + b;
-// }
 
-// void Layer_Norm_vector_s(
-//     hls::stream<t_floatVec_0>& v_stream,
-//     hls::stream<t_floatVec_0>& w_stream,
-//     hls::stream<t_floatVec_0>& b_stream,
-//     hls::stream<t_floatVec_0>& output_stream
-// ){
-// 	 #pragma HLS inline off
-//     float E_v = 0;
-//     hls::vector<float, group_num> E_v_v;
-//     float E_v_2 = 0;
-//     hls::vector<float, group_num> E_v_2_v;
-//     t_floatVec_0 v_2_i;
-//     float sum_chunk;
-//     float sum_square_chunk;
-//     // Compute chunk-wise average and squared average
-//     for(int i = 0; i < group_num; i++){
-// // 		 #pragma HLS pipeline II=256
-// 		#pragma hls unroll factor=16 skip_exit_check
-//         t_floatVec_0 v_i = v_stream.read();
-//         sum_chunk = 0;
-//         sum_square_chunk = 0;
-//         for(int j = 0; j < stream_kernel_float_0; j++){
-//             #pragma hls unroll factor=16 skip_exit_check
-//             sum_chunk += v_i[j];
-//             sum_square_chunk += v_i[j] * v_i[j];
-//         }
-//         E_v_v[i] = sum_chunk / stream_kernel_float_0;
-//         E_v_2_v[i] = sum_square_chunk / stream_kernel_float_0;
-//     }
-//     E_v = E_v_v.reduce_add();
-//     E_v_2 = E_v_2_v.reduce_add();
-//     E_v /= (group_num);
-//     E_v_2 /= (group_num);
-//     // Compute variance
-//     float var = E_v_2 - E_v * E_v;
-//     // Perform normalization
-//     for(int i = 0; i < group_num; i++){
-// 		// #pragma HLS pipeline II=256
-// 		#pragma hls unroll factor=16 skip_exit_check
-//         t_floatVec_0 v_i = v_stream.read();
-//         t_floatVec_0 w_i = w_stream.read();
-//         t_floatVec_0 b_i = b_stream.read();
-//         t_floatVec_0 output_i;
-//         for(int j = 0; j < stream_kernel_float_0; j++){
-//             #pragma hls unroll factor=4 skip_exit_check
-//             output_i[j] = (v_i[j] - E_v) / sqrt(var + epsilon);
-//         }
-//         output_i = output_i * w_i + b_i;
-//         output_stream.write(output_i);
-//     }
-// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void split_stream(hls::stream<t_floatVec_0>& in_stream, hls::stream<t_floatVec_0>& out_stream1, hls::stream<t_floatVec_0>& out_stream2){
 	#pragma HLS inline off
 	for(int i = 0; i < group_num; i++){
 		#pragma HLS pipeline II=10
-		// #pragma hls unroll factor=16 skip_exit_check
+		
 		t_floatVec_0 in_value = in_stream.read();
 
-		// Depending on how you want to split the stream,
-		// you might perform some processing on in_value here.
+		
+		
 
 		out_stream1.write(in_value);
 		out_stream2.write(in_value);
@@ -308,16 +293,16 @@ void chunk_wise_average_s(
    float sum_chunk;
    float sum_square_chunk;
 
-   // Compute chunk-wise average and squared average
+   
    for(int i = 0; i < group_num; i++){
-//		#pragma HLS pipeline II=512
-//		#pragma hls unroll factor=4 skip_exit_check
+
+
        	t_floatVec_0 v_i = v_stream.read();
        	sum_chunk = 0;
        	sum_square_chunk = 0;
 
        	for(int j = 0; j < stream_kernel_float_0; j++){
-//           #pragma hls unroll factor=4 skip_exit_check
+
            sum_chunk += v_i[j];
            sum_square_chunk += v_i[j] * v_i[j];
        }
@@ -326,14 +311,14 @@ void chunk_wise_average_s(
        E_v += E_v_v;
        E_v_2 +=  E_v_2_v;
    }
-//   E_v = E_v_v.reduce_add();
-//   E_v_2 = E_v_2_v.reduce_add();
+
+
 
    E_v /= (group_num);
    E_v_2 /= (group_num);
 
-	// E_v_stream.write(E_v);
-	// E_v_2_stream.write(E_v_2);
+	
+	
 
    var = E_v_2 - E_v * E_v;
 
@@ -348,16 +333,16 @@ void norm_s(
 	hls::stream<t_floatVec_0>& output_stream
 ){
 	#pragma HLS inline off
-   // Perform normalization
+   
    for(int i = 0; i < group_num; i++){
-//		#pragma HLS pipeline II=256
+
        	t_floatVec_0 v_i = v_stream.read();
         t_floatVec_0 w_i = w_stream.read();
         t_floatVec_0 b_i = b_stream.read();
         t_floatVec_0 output_i;
 
        for(int j = 0; j < stream_kernel_float_0; j++){
-//           #pragma hls unroll factor=16 skip_exit_check
+
            output_i[j] = (v_i[j] - E_v) / sqrt(var + epsilon);
        }
        output_i = output_i * w_i + b_i;
@@ -376,10 +361,10 @@ void Layer_Norm_vector_s(
 	hls::stream<t_floatVec_0> v1_stream;
 	hls::stream<t_floatVec_0> v2_stream;
 	float E_v;
-	// #pragma HLS stream variable=var_stream depth=256
+	
 	#pragma HLS stream variable=v1_stream depth=256
 	#pragma HLS stream variable=v2_stream depth=256
-	// #pragma HLS stream variable=E_v_stream depth=256	
+	
 	split_stream(v_stream,v1_stream,v2_stream);
 	chunk_wise_average_s(v1_stream, var, E_v);
 	norm_s(var,E_v, v2_stream, w_stream, b_stream, output_stream);
@@ -420,7 +405,7 @@ void dynamic_act_quant32_large_s(hls::stream<t_floatVec_0>& input_x, hls::stream
 	#pragma HLS inline off
 	for(int i = 0; i < group_num_large; i++){
 		#pragma HLS pipeline II=10
-		// #pragma hls unroll factor=64 skip_exit_check
+		
 		t_floatVec_0 input_x_i = input_x.read();
 		t_int8Vec_1 output_x_i;
 		float max = find_max_abs_32(input_x_i[0], input_x_i[1], input_x_i[2], input_x_i[3], input_x_i[4], input_x_i[5], input_x_i[6], input_x_i[7], input_x_i[8], input_x_i[9], input_x_i[10], input_x_i[11], input_x_i[12], input_x_i[13], input_x_i[14], input_x_i[15], input_x_i[16], input_x_i[17], input_x_i[18], input_x_i[19], input_x_i[20], input_x_i[21], input_x_i[22], input_x_i[23], input_x_i[24], input_x_i[25], input_x_i[26], input_x_i[27], input_x_i[28], input_x_i[29], input_x_i[30], input_x_i[31]);
@@ -456,7 +441,7 @@ void time_mix_s(
 	#pragma HLS inline off
     for(int i = 0; i < group_num; i++){
 		#pragma HLS pipeline II=10
-		// #pragma hls unroll factor=16 skip_exit_check
+		
         t_floatVec_0 xk_i;
         t_floatVec_0 xv_i;
         t_floatVec_0 xr_i;
@@ -467,14 +452,14 @@ void time_mix_s(
         t_floatVec_0 time_mix_r_i = time_mix_r_stream.read();
 
         for(int j = 0; j < stream_kernel_float_0; j++){
-            // #pragma hls unroll factor=16 skip_exit_check
+            
             xk_i[j] = xx_i[j] * time_mix_k_i[j] + state_xx_i[j] * (1 - time_mix_k_i[j]);
             xv_i[j] = xx_i[j] * time_mix_v_i[j] + state_xx_i[j] * (1 - time_mix_v_i[j]);
             xr_i[j] = xx_i[j] * time_mix_r_i[j] + state_xx_i[j] * (1 - time_mix_r_i[j]);
             state_xx_i[j] = xx_i[j];
         }
 
-        // Writing the output streams
+        
         xk_stream.write(xk_i);
         xv_stream.write(xv_i);
         xr_stream.write(xr_i);
@@ -484,39 +469,39 @@ void time_mix_s(
 
 void time_mix_FF_s(
     hls::stream<t_floatVec_0>& xk_stream,
-    // hls::stream<t_floatVec_0>& xv_stream,
+    
     hls::stream<t_floatVec_0>& xr_stream,
     hls::stream<t_floatVec_0>& state_xx_stream_in,
 	hls::stream<t_floatVec_0>& state_xx_stream_out,
     hls::stream<t_floatVec_0>& xx_stream,
     hls::stream<t_floatVec_0>& time_mix_k_stream,
-    // hls::stream<t_floatVec_0>& time_mix_v_stream,
+    
     hls::stream<t_floatVec_0>& time_mix_r_stream
 ){
 	#pragma HLS inline off
     for(int i = 0; i < group_num; i++){
 		#pragma HLS pipeline II=10
-		// #pragma hls unroll factor=16 skip_exit_check
+		
         t_floatVec_0 xk_i;
-        // t_floatVec_0 xv_i = xv_stream.read();
+        
         t_floatVec_0 xr_i;
         t_floatVec_0 state_xx_i = state_xx_stream_in.read();
         t_floatVec_0 xx_i = xx_stream.read();
         t_floatVec_0 time_mix_k_i = time_mix_k_stream.read();
-        // t_floatVec_0 time_mix_v_i = time_mix_v_stream.read();
+        
         t_floatVec_0 time_mix_r_i = time_mix_r_stream.read();
 
         for(int j = 0; j < stream_kernel_float_0; j++){
             #pragma hls unroll factor=16 skip_exit_check
             xk_i[j] = xx_i[j] * time_mix_k_i[j] + state_xx_i[j] * (1 - time_mix_k_i[j]);
-            // xv_i[j] = xx_i[j] * time_mix_v_i[j] + state_xx_i[j] * (1 - time_mix_v_i[j]);
+            
             xr_i[j] = xx_i[j] * time_mix_r_i[j] + state_xx_i[j] * (1 - time_mix_r_i[j]);
             state_xx_i[j] = xx_i[j];
         }
 
-        // Writing the output streams
+        
         xk_stream.write(xk_i);
-        // xv_stream.write(xv_i);
+        
         xr_stream.write(xr_i);
         state_xx_stream_out.write(state_xx_i);
     }
@@ -524,20 +509,20 @@ void time_mix_FF_s(
 
 void MVVq_s0_s(hls::stream<t_int8Vec_1>& vec, hls::stream<t_int8Vec_1>& out_vec){
 	#pragma HLS inline off
- 	// #pragma HLS pipeline II=256
+ 	
  	t_int8Vec_1 input_arr[group_num];
- 	// float r_vec_arr[group_num];
+ 	
  	for(int i = 0; i < group_num; i++){
-// 		 #pragma HLS pipeline
- 		// #pragma hls unroll factor=16 skip_exit_check
+
+ 		
  		input_arr[i] = vec.read();
- 		// r_vec_arr[i] = r_vec.read();
+ 		
  	}
-//	for(int iter = 0; iter < n_embed * group_num; iter++){
-//#pragma HLS pipeline
-//		int j = iter % group_num;
-//		out_vec.write(input_arr[j]);
-//	}
+
+
+
+
+
  	for(int i = 0; i < n_embed; i++){
  		for(int j = 0; j < group_num; j++){
  			out_vec.write(input_arr[j]);
@@ -547,20 +532,20 @@ void MVVq_s0_s(hls::stream<t_int8Vec_1>& vec, hls::stream<t_int8Vec_1>& out_vec)
 
 void MVVq_s0_r_s(hls::stream<float>& r_vec, hls::stream<float>& out_rvec){
 	#pragma HLS inline off
- 	// #pragma HLS pipeline II=256
+ 	
  	float r_vec_arr[group_num];
- 	// float r_vec_arr[group_num];
+ 	
  	for(int i = 0; i < group_num; i++){
-// 		 #pragma HLS pipeline
- 		// #pragma hls unroll factor=16 skip_exit_check
+
+ 		
  		r_vec_arr[i] = r_vec.read();
- 		// r_vec_arr[i] = r_vec.read();
+ 		
  	}
-//	for(int iter = 0; iter < n_embed * group_num; iter++){
-//#pragma HLS pipeline
-//		int j = iter % group_num;
-//		out_rvec.write(r_vec_arr[j]);
-//	}
+
+
+
+
+
  	for(int i = 0; i < n_embed; i++){
  		for(int j = 0; j < group_num; j++){
  			out_rvec.write(r_vec_arr[j]);
@@ -568,36 +553,36 @@ void MVVq_s0_r_s(hls::stream<float>& r_vec, hls::stream<float>& out_rvec){
  	}
 }
 
-// void MVVq_s1_s(hls::stream<t_int8Vec_1>& mtx, hls::stream<t_int8Vec_1>& vec, hls::stream<float>& r_vec, hls::stream<float>& r_mtx, hls::stream<float>& out){
-// 	#pragma HLS inline off
-// 	for(int iter = 0; iter < n_embed * group_num; iter++){
-// 	#pragma HLS pipeline II=10
-// 	// #pragma HLS unroll factor=64 skip_exit_check
-//  		// int i = iter / group_num;
-//  		int j = iter % group_num;
-//  		// #pragma HLS pipeline II=256
-//  		// #pragma hls unroll factor=4096 skip_exit_check
-//  		t_int8Vec_1 mtx_i = mtx.read();
-//  		float r_mtx_i = r_mtx.read();
-//  		t_int16Vec_0 inter;
-// 		t_int8Vec_1 input_arr = vec.read();
-//  		int sum = 0;
-//  		for(int k = 0; k < stream_kernel_int8_1; k++){
 
-//  			// #pragma hls unroll factor=16 skip_exit_check
-//  			inter[k] = input_arr[k] * mtx_i[k];
-//  			sum += inter[k];
-//  		}
 
-//  //		for(int i = 0; i < stream_kernel_int16_0; i++){
-//  //			#pragma HLS pipeline
-//  //			// #pragma hls unroll factor=16 skip_exit_check
-//  //			sum += inter[i];
-//  //		}
-//  		float r_vec_arr = r_vec.read();
-//  		out.write(r_mtx_i * r_vec_arr * static_cast<float>(sum)); //potential overflow: reduce add
-//  	}
-// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void MVVq_s1_s(hls::stream<t_int8Vec_1>& mtx, hls::stream<t_int8Vec_1>& vec, hls::stream<float>& r_vec, hls::stream<float>& r_mtx, hls::stream<float>& out){
 	#pragma HLS inline off
@@ -613,7 +598,7 @@ void MVVq_s1_s(hls::stream<t_int8Vec_1>& mtx, hls::stream<t_int8Vec_1>& vec, hls
  			int sum = 0;
  			for(int k = 0; k < stream_kernel_int8_1; k++){
 
- 				// #pragma hls unroll factor=16 skip_exit_check
+ 				
  				inter[k] = input_arr[k] * mtx_i[k];
  				sum += inter[k];
  			}
@@ -623,39 +608,39 @@ void MVVq_s1_s(hls::stream<t_int8Vec_1>& mtx, hls::stream<t_int8Vec_1>& vec, hls
 	}
 }
 
-// void MVVq_s1_s(hls::stream<t_int8Vec_1>& mtx, hls::stream<t_int8Vec_1>& vec, hls::stream<float>& r_vec, hls::stream<float>& r_mtx, hls::stream<float>& out){
-//     #pragma HLS inline off
-//     t_int8Vec_1 input_arr;
-// 	float r_vec_arr;
-//     for (int i = 0; i < group_num; i++){
-// #pragma HLS pipeline II=10
-//         input_arr = vec.read();
-//         r_vec_arr = r_vec.read();
-//         for(int j = 0; j < n_embed; j++){
-//             t_int8Vec_1 mtx_i = mtx.read();
-//             float r_mtx_i = r_mtx.read();
-//             t_int16Vec_0 inter;
-// 		    int sum = 0;
-//             for(int k = 0; k < stream_kernel_int8_1; k++){
-// 			    #pragma HLS pipeline
-// 			    // #pragma hls unroll factor=16 skip_exit_check
-// 			    inter[k] = input_arr[k] * mtx_i[k];
-// 			    sum += inter[k];
-// 		    }
-//             out.write(r_mtx_i * r_vec_arr * static_cast<float>(sum));
-//         }
-//     }
-// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void MVVq_s2_s(hls::stream<float>& in, hls::stream<float>& output){
 	#pragma HLS inline off
-	// #pragma HLS pipeline II=256
+	
 	for(int status = 0; status < n_embed; status++){
 		float res = 0;
 		float sum = 0;
 		for(int i = 0; i < group_num; i++){
 			#pragma HLS pipeline
-			// #pragma hls unroll factor=16 skip_exit_check
+			
 			res = in.read();
 			sum += res;
 		}
@@ -665,17 +650,17 @@ void MVVq_s2_s(hls::stream<float>& in, hls::stream<float>& output){
 
 void MVVq_s3_s(hls::stream<float>& in, hls::stream<t_floatVec_0>& output){
 	#pragma HLS inline off
-	// #pragma HLS pipeline II=256
+	
 	t_floatVec_0 res[group_num];
 
 	for(int cur_status = 0; cur_status < n_embed; cur_status++){
 		#pragma HLS pipeline 
-		// #pragma hls unroll factor=512 skip_exit_check
+		
 		res[cur_status / stream_kernel_float_0][cur_status % stream_kernel_float_0] = in.read();
 	}
 	for(int i = 0; i < group_num; i++){
 		#pragma HLS pipeline 
-		// #pragma hls unroll factor=16 skip_exit_check
+		
 		output.write(res[i]);
 	}
 }
@@ -737,7 +722,7 @@ void MVVq_large_row_s1_s(hls::stream<t_int8Vec_1>& mtx, hls::stream<t_int8Vec_1>
  			int sum = 0;
  			for(int k = 0; k < stream_kernel_int8_1; k++){
 
- 				// #pragma hls unroll factor=16 skip_exit_check
+ 				
  				inter[k] = input_arr[k] * mtx_i[k];
  				sum += inter[k];
  			}
@@ -754,7 +739,7 @@ void MVVq_large_row_s2_s(hls::stream<float>& in, hls::stream<float>& output){
 		float sum = 0;
 		for(int i = 0; i < group_num_large; i++){
 			#pragma HLS pipeline 
-			// #pragma hls unroll factor=64 skip_exit_check
+			
 			res = in.read();
 			sum += res;
 		}
@@ -784,7 +769,7 @@ void MVV_large_row_s(hls::stream<t_floatVec_0>& xvec, hls::stream<t_int8Vec_1>& 
 	#pragma HLS stream variable=v8 depth=256
 	hls::stream<float> r_vec_act_v;
 	#pragma HLS stream variable=r_vec_act_v depth=256
-	//void dynamic_act_quant32_s(hls::stream<t_floatVec_0>& input_x, hls::stream<t_int8Vec_1>& output_x, hls::stream<float>& r_vec)
+	
 	dynamic_act_quant32_large_s(xvec, v8, r_vec_act_v);
 	MVVq_large_row_s(weight, v8, r_vec_act_v, r_m, output);	
 }
@@ -793,7 +778,7 @@ void MVVq_large_vec_s0_s(hls::stream<t_int8Vec_1>& vec, hls::stream<t_int8Vec_1>
 	#pragma HLS inline off
 	t_int8Vec_1 input_arr[group_num];
 	for (int i = 0; i < group_num; i++){
-		// #pragma HLS pipeline
+		
 		input_arr[i] = vec.read();
 	}
 	for(int i = 0; i < n_embed_large; i++){
@@ -830,7 +815,7 @@ void MVVq_large_vec_s1_s(hls::stream<t_int8Vec_1>& mtx, hls::stream<t_int8Vec_1>
  			int sum = 0;
  			for(int k = 0; k < stream_kernel_int8_1; k++){
 
- 				// #pragma hls unroll factor=16 skip_exit_check
+ 				
  				inter[k] = input_arr[k] * mtx_i[k];
  				sum += inter[k];
  			}
@@ -847,7 +832,7 @@ void MVVq_large_vec_s2_s(hls::stream<float>& in, hls::stream<float>& output){
 		float sum = 0;
 		for(int i = 0; i < group_num; i++){
 			#pragma HLS pipeline 
-			// #pragma hls unroll factor=16 skip_exit_check
+			
 			res = in.read();
 			sum += res;
 		}
@@ -860,7 +845,7 @@ void MVVq_large_vec_s3_s(hls::stream<float>& in, hls::stream<t_floatVec_0>& outp
 	t_floatVec_0 res[group_num_large];
 	for(int cur_status = 0; cur_status < n_embed_large; cur_status++){
 		#pragma HLS pipeline II=10
-		// #pragma hls unroll factor=64 skip_exit_check
+		
 		res[cur_status / stream_kernel_float_0][cur_status % stream_kernel_float_0] = in.read();
 	}
 	for(int i = 0; i < group_num_large; i++){
@@ -891,7 +876,7 @@ void MVV_large_vec_s(hls::stream<t_floatVec_0>& xvec, hls::stream<t_int8Vec_1>& 
 	#pragma HLS stream variable=v8 depth=256
 	hls::stream<float> r_vec_act_v;
 	#pragma HLS stream variable=r_vec_act_v depth=256
-	//void dynamic_act_quant32_s(hls::stream<t_floatVec_0>& input_x, hls::stream<t_int8Vec_1>& output_x, hls::stream<float>& r_vec)
+	
 	dynamic_act_quant32_s(xvec, v8, r_vec_act_v);
 	MVVq_large_vec_s(weight, v8, r_vec_act_v, r_m, output);	
 }
@@ -902,7 +887,7 @@ void MVVq(t_int8Vec a[n_embed], t_int8Vec output_x, t_floatGroup r_vec, t_floatG
 		#pragma hls unroll factor=16 skip_exit_check
 		for(int j = 0; j < n_embed; j++){
 			#pragma hls unroll factor=16 skip_exit_check
-			a_[i][j] = a[i][j] * output_x[j]; //Maybe the output precison is low
+			a_[i][j] = a[i][j] * output_x[j]; 
 		}
 	}
 	t_floatGroup inter_result[n_embed];
@@ -937,7 +922,7 @@ void exp_minus_s(hls::stream<t_floatVec_0>& a, hls::stream<t_floatVec_0>& b, hls
   #pragma HLS inline off
   for(int i = 0; i < group_num; i++){
 	#pragma HLS pipeline II=10
-	// #pragma hls unroll factor=16 skip_exit_check
+	
     t_floatVec_0 a_i = a.read();
     t_floatVec_0 b_i = b.read();
     t_floatVec_0 out_i;
@@ -953,7 +938,7 @@ void mulVec_s(hls::stream<t_floatVec_0>& a, hls::stream<t_floatVec_0>& b, hls::s
   #pragma HLS inline off
   for(int i = 0; i < group_num; i++){
 	#pragma HLS pipeline II=10
-	// #pragma hls unroll factor=16 skip_exit_check
+	
     t_floatVec_0 a_i = a.read();
     t_floatVec_0 b_i = b.read();
     t_floatVec_0 out_i = a_i * b_i;
@@ -971,7 +956,7 @@ void maximum_s(hls::stream<t_floatVec_0>& a, hls::stream<t_floatVec_0>& b, hls::
   #pragma HLS inline off
   for(int i = 0; i < group_num; i++){
 	#pragma HLS pipeline II=10
-	// #pragma hls unroll factor=16 skip_exit_check
+	
     t_floatVec_0 a_i = a.read();
     t_floatVec_0 b_i = b.read();
     t_floatVec_0 out_i;
@@ -987,7 +972,7 @@ void add_vec_s(hls::stream<t_floatVec_0>& a, hls::stream<t_floatVec_0>& b, hls::
   #pragma HLS inline off
   for(int i = 0; i < group_num; i++){
 	#pragma HLS pipeline II=10
-	// #pragma hls unroll factor=16 skip_exit_check
+	
     t_floatVec_0 a_i = a.read();
     t_floatVec_0 b_i = b.read();
     t_floatVec_0 out_i;
@@ -1019,72 +1004,72 @@ void kernel_computation(t_floatVec& r, t_floatVec& k, t_floatVec& v, t_floatVec&
 	state_pp = p;
 	rwkv = r * a / b;
 }
-// void kernel_computation_s(
-//     hls::stream<t_floatVec_0>& r, 
-//     hls::stream<t_floatVec_0>& k, 
-//     hls::stream<t_floatVec_0>& v, 
-// 	hls::stream<t_floatVec_0>& state_pp_in,
-// 	hls::stream<t_floatVec_0>& state_bb_in,
-// 	hls::stream<t_floatVec_0>& state_aa_in,  
-//     hls::stream<t_floatVec_0>& state_pp_out,
-// 	hls::stream<t_floatVec_0>& state_bb_out,
-// 	hls::stream<t_floatVec_0>& state_aa_out,
-//     hls::stream<t_floatVec_0>& time_first, 
-//     hls::stream<t_floatVec_0>& time_decay, 
-//     hls::stream<t_floatVec_0>& rwkv
-// ){
-// 	#pragma HLS inline off
-//     for(int i = 0; i < group_num; i++){
-// 		#pragma HLS pipeline II=10
-// 		// #pragma hls unroll factor=16 skip_exit_check
-//         t_floatVec_0 r_i = r.read();
-//         t_floatVec_0 k_i = k.read();
-//         t_floatVec_0 v_i = v.read();
-//         t_floatVec_0 state_pp_i = state_pp_in.read();
-//         t_floatVec_0 state_bb_i = state_bb_in.read();
-//         t_floatVec_0 state_aa_i = state_aa_in.read();
-//         t_floatVec_0 time_first_i = time_first.read();
-//         t_floatVec_0 time_decay_i = time_decay.read();
-//         t_floatVec_0 rwkv_i;
 
-//         t_floatVec_0 pp_i = state_pp_i;
-//         t_floatVec_0 aa_i = state_aa_i;
-//         t_floatVec_0 bb_i = state_bb_i;
-//         t_floatVec_0 ww_i = time_first_i + k_i;
-//         t_floatVec_0 p_i;
-//         t_floatVec_0 e1_i;
-//         t_floatVec_0 e2_i;
 
-//         for(int j = 0; j < stream_kernel_float_0; j++){
-//             #pragma hls unroll factor=16 skip_exit_check
-//             p_i[j] = (pp_i[j] > ww_i[j]) ? pp_i[j] : ww_i[j];
-//             e1_i[j] = exp(pp_i[j] - p_i[j]);
-//             e2_i[j] = exp(ww_i[j] - p_i[j]);
-//         }
 
-//         t_floatVec_0 a_i = e1_i * aa_i + e2_i * v_i;
-//         t_floatVec_0 b_i = e1_i * bb_i + e2_i;
-//         ww_i = pp_i + time_decay_i;
 
-//         for(int j = 0; j < stream_kernel_float_0; j++){
-//             #pragma hls unroll factor=16 skip_exit_check
-//             p_i[j] = (ww_i[j] > k_i[j]) ? ww_i[j] : k_i[j];
-//             e1_i[j] = exp(ww_i[j] - p_i[j]);
-//             e2_i[j] = exp(k_i[j] - p_i[j]);
-//         }
 
-//         state_aa_i = e1_i * aa_i + e2_i * v_i;
-//         state_bb_i = e1_i * bb_i + e2_i;
-//         state_pp_i = p_i;
-//         rwkv_i = r_i * a_i / b_i;
 
-//         // Writing the output streams
-//         state_pp_out.write(state_pp_i);
-//         state_bb_out.write(state_bb_i);
-//         state_aa_out.write(state_aa_i);
-//         rwkv.write(rwkv_i);
-//     }
-// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void kernel_computation_s(
     hls::stream<t_floatVec_0>& r, 
     hls::stream<t_floatVec_0>& k, 
@@ -1102,7 +1087,7 @@ void kernel_computation_s(
 	#pragma HLS inline off
     for(int i = 0; i < group_num; i++){
 		#pragma HLS pipeline II=10
-		// #pragma hls unroll factor=16 skip_exit_check
+		
         t_floatVec_0 r_i = r.read();
         t_floatVec_0 k_i = k.read();
         t_floatVec_0 v_i = v.read();
@@ -1144,7 +1129,7 @@ void kernel_computation_s(
         state_pp_i = p_i;
         rwkv_i = r_i * a_i / b_i;
 
-        // Writing the output streams
+        
         state_pp_out.write(state_pp_i);
         state_bb_out.write(state_bb_i);
         state_aa_out.write(state_aa_i);
@@ -1155,7 +1140,7 @@ void convert_float32_to_float8_s(hls::stream<t_floatVec_0>& input, hls::stream<t
 	#pragma HLS inline off
 	for(int i = 0; i < group_num; i++){
 		#pragma HLS pipeline II=10
-		// #pragma hls unroll factor=16 skip_exit_check
+		
 		t_floatVec_0 input_i = input.read();
 		t_floatVec_1 output_i_1;
 		t_floatVec_1 output_i_2;
@@ -1210,7 +1195,7 @@ void kernel_computation_8_s(
 	#pragma HLS inline off
     for(int i = 0; i < group_num; i++){
 		#pragma HLS pipeline II=10
-		// #pragma hls unroll factor=16 skip_exit_check
+		
         t_floatVec_1 r_i = r.read();
         t_floatVec_1 k_i = k.read();
         t_floatVec_1 v_i = v.read();
@@ -1252,7 +1237,7 @@ void kernel_computation_8_s(
         state_pp_i = p_i;
         rwkv_i = r_i * a_i / b_i;
 
-        // Writing the output streams
+        
         state_pp_out.write(state_pp_i);
         state_bb_out.write(state_bb_i);
         state_aa_out.write(state_aa_i);
@@ -1330,7 +1315,7 @@ void sigmoid_s(hls::stream<t_floatVec_0>& a, hls::stream<t_floatVec_0>& b){
 	#pragma HLS inline off
   for(int i = 0; i < group_num; i++){
 	#pragma HLS pipeline II=10
-	// #pragma hls unroll factor=16 skip_exit_check
+	
     t_floatVec_0 a_i = a.read();
     for(int j = 0; j < stream_kernel_float_0; j++){
       #pragma hls unroll factor=16 skip_exit_check
@@ -1370,7 +1355,7 @@ void relu_s(hls::stream<t_floatVec_0>& a, hls::stream<t_floatVec_0>& b){
 	#pragma HLS inline off
 	for(int i = 0; i < group_num; i++){
 		#pragma HLS pipeline II=10
-		// #pragma hls unroll factor=16 skip_exit_check
+		
 		t_floatVec_0 a_i = a.read();
 		for(int j = 0; j < stream_kernel_float_0; j++){
 			#pragma hls unroll factor=16 skip_exit_check
@@ -1386,7 +1371,7 @@ void relu_large_s(hls::stream<t_floatVec_0>& a, hls::stream<t_floatVec_0>& b){
 	#pragma HLS inline off
 	for(int i = 0; i < group_num_large; i++){
 		#pragma HLS pipeline II=10
-		// #pragma hls unroll factor=16 skip_exit_check
+		
 		t_floatVec_0 a_i = a.read();
 		for(int j = 0; j < stream_kernel_float_0; j++){
 			#pragma hls unroll factor=16 skip_exit_check
@@ -1400,7 +1385,7 @@ void relu_large_s(hls::stream<t_floatVec_0>& a, hls::stream<t_floatVec_0>& b){
 
 void square(t_floatVec& a, t_floatVec& b){
 	for (int i = 1; i < n_embed; i++){
-		// #pragma hls unroll factor=16 skip_exit_check
+		
 		b[i] = a[i] * a[i];
 	}
 }
@@ -1409,7 +1394,7 @@ void square_s(hls::stream<t_floatVec_0>& a, hls::stream<t_floatVec_0>& b){
 	#pragma HLS inline off
   for(int i = 0; i < group_num; i++){
 	#pragma HLS pipeline II=10
-	// #pragma hls unroll factor=16 skip_exit_check
+	
     t_floatVec_0 a_i = a.read();
     for(int j = 0; j < stream_kernel_float_0; j++){
       #pragma hls unroll factor=16 skip_exit_check  
@@ -1423,7 +1408,7 @@ void square_large_s(hls::stream<t_floatVec_0>& a, hls::stream<t_floatVec_0>& b){
 	#pragma HLS inline off
   for(int i = 0; i < group_num_large; i++){
 	#pragma HLS pipeline II=10
-	// #pragma hls unroll factor=16 skip_exit_check
+	
     t_floatVec_0 a_i = a.read();
     for(int j = 0; j < stream_kernel_float_0; j++){
       #pragma hls unroll factor=16 skip_exit_check  
@@ -1447,7 +1432,7 @@ void MVV_s(hls::stream<t_floatVec_0>& xvec, hls::stream<t_int8Vec_1>& weight, hl
 	#pragma HLS stream variable=v8 depth=256
 	hls::stream<float> r_vec_act_v;
 	#pragma HLS stream variable=r_vec_act_v depth=256
-	//void dynamic_act_quant32_s(hls::stream<t_floatVec_0>& input_x, hls::stream<t_int8Vec_1>& output_x, hls::stream<float>& r_vec)
+	
 	dynamic_act_quant32_s(xvec, v8, r_vec_act_v);
 	MVVq_s(weight, v8, r_vec_act_v, r_m, output);	
 }
@@ -1463,7 +1448,7 @@ void FF(t_floatVec& xx, t_floatVec& time_mix_k, t_floatVec& time_mix_r, t_int8Ve
 	t_int8Vec r8;
 	t_floatGroup r_vec_act_r;
 	dynamic_act_quant(xr, r8, r_vec_act_r);
-	//t_int8Vec a[n_embed], t_int8Vec output_x, t_floatGroup r_vec, t_floatGroup r_vec_m[n_embed], t_floatVec& output
+	
 	t_floatVec rw_xr;
 	MVVq(r_weight, r8, r_vec_act_r, r_vec_mr, rw_xr);
 	t_floatVec r;
@@ -1504,7 +1489,7 @@ hls::stream<t_floatVec_0>& state_xx_stream_out,
 hls::stream<t_floatVec_0>& result_stream
 ){
 	#pragma HLS dataflow
-    // Create intermediate streams
+    
     hls::stream<t_floatVec_0> xk_stream, xr_stream, kv_stream;
     hls::stream<t_floatVec_0> r_stream;
 	hls::stream<t_floatVec_0> rw_xr_stream;
@@ -1518,42 +1503,42 @@ hls::stream<t_floatVec_0>& result_stream
 	#pragma HLS stream variable=k_relu_stream depth=256
 	#pragma HLS stream variable=k_square_stream depth=256
 
-    // Connect time_mix_FF_s
+    
     time_mix_FF_s(xk_stream, xr_stream, state_xx_stream_in, state_xx_stream_out, xx_stream, time_mix_k_stream, time_mix_r_stream);
     
-    // Connect MVV_s for xr
+    
     MVV_s(xr_stream, r_weight_stream, r_vec_mr_stream, rw_xr_stream);
 
-    // Connect sigmoid_s
+    
     sigmoid_s(rw_xr_stream, r_stream);
 
-    // Connect MVV_s for xk
+    
     MVV_large_vec_s(xk_stream, k_weight_stream, r_vec_mk_stream, kw_xk_stream);
 
-    // Connect relu_s
+    
     relu_large_s(kw_xk_stream, k_relu_stream);
 
-    // Connect square_s
+    
     square_large_s(k_relu_stream, k_square_stream);
 
-    // Connect MVV_s for k_square
+    
     MVV_large_row_s(k_square_stream, v_weight_stream, r_vec_mv_stream, kv_stream);
 
-    // Connect result_stream
+    
 	mulVec_s(r_stream, kv_stream, result_stream);
 }
 
 void SA(t_floatVec& xx, t_floatVec& time_first, t_floatVec& time_decay, t_floatVec& time_mix_k, t_floatVec& time_mix_v, t_floatVec& time_mix_r, t_int8Vec r_weight[n_embed], t_int8Vec k_weight[n_embed], t_int8Vec v_weight[n_embed], t_int8Vec o_weight[n_embed], t_floatGroup r_vec_mr[n_embed], t_floatGroup r_vec_mk[n_embed], t_floatGroup r_vec_mv[n_embed], t_floatGroup r_vec_mo[n_embed], t_floatVec& state_aa, t_floatVec& state_bb, t_floatVec& state_pp, t_floatVec& state_xx, t_floatVec& result){
-	//t_floatVec& xk, t_floatVec& xv, t_floatVec& xr, t_floatVec& state_xx, t_floatVec xx, t_floatVec time_mix_k, t_floatVec time_mix_v, t_floatVec time_mix_r
+	
 	t_floatVec xk; 
 	t_floatVec xv; 
 	t_floatVec xr;
 	time_mix(xk, xv, xr, state_xx, xx, time_mix_k, time_mix_v, time_mix_r);
-	//void dynamic_act_quant(t_floatVec& input_x, t_int8Vec& output_x, t_floatGroup& r_vec){
+	
 	t_int8Vec r8;
 	t_floatGroup r_vec_act_r;
 	dynamic_act_quant(xr, r8, r_vec_act_r);
-	//t_int8Vec a[n_embed], t_int8Vec output_x, t_floatGroup r_vec, t_floatGroup r_vec_m[n_embed], t_floatVec& output
+	
 	t_floatVec rw_xr;
 	MVVq(r_weight, r8, r_vec_act_r, r_vec_mr, rw_xr);
 	t_floatVec r;
@@ -1607,7 +1592,7 @@ hls::stream<t_floatVec_0>& state_xx_stream_out,
 hls::stream<t_floatVec_0>& result_stream
 ){
 	#pragma HLS dataflow
-    // Create intermediate streams
+    
     hls::stream<t_floatVec_0> xk_stream, xv_stream, xr_stream,  rwkv_stream;
 	hls::stream<t_floatVec_0> rw_xr_stream, r_stream;
     hls::stream<t_floatVec_0> kw_xk_stream, vw_xv_stream;
@@ -1620,42 +1605,42 @@ hls::stream<t_floatVec_0>& result_stream
 	#pragma HLS stream variable=kw_xk_stream depth=256
 	#pragma HLS stream variable=vw_xv_stream depth=256
 
-    // Connect time_mix_s
+    
     time_mix_s(xk_stream, xv_stream, xr_stream, state_xx_stream_in, state_xx_stream_out, xx_stream, time_mix_k_stream, time_mix_v_stream, time_mix_r_stream);
     
-    // Connect MVV_s for xr
+    
     MVV_s(xr_stream, r_weight_stream, r_vec_mr_stream, rw_xr_stream);
 
-    // Connect sigmoid_s
+    
     sigmoid_s(rw_xr_stream, r_stream);
 
-    // Connect MVV_s for xk
+    
     MVV_s(xk_stream, k_weight_stream, r_vec_mk_stream, kw_xk_stream);
 
-    // Connect MVV_s for xv
+    
     MVV_s(xv_stream, v_weight_stream, r_vec_mv_stream, vw_xv_stream);
 
-    // Connect kernel_computation_s
+    
     kernel_computation_s(r_stream, kw_xk_stream, vw_xv_stream, state_pp_stream_in, state_bb_stream_in, state_aa_stream_in,
                          state_pp_stream_out, state_bb_stream_out, state_aa_stream_out,
                          time_first_stream, time_decay_stream, rwkv_stream);
 
-    // Connect MVV_s for rwkv
+    
     MVV_s(rwkv_stream, o_weight_stream, r_vec_mo_stream, result_stream);
 }
 
-// void layer_common(State& state, WeightBlock& weight_block, t_floatVec& x, t_floatVec& output){
-// 	t_floatVec output1;
-// 	t_floatVec output2;
 
-// 	t_floatVec output3;
-// 	Layer_Norm_vector(x, weight_block.ln1.weight, weight_block.ln1.bias, output1);
-// 	SA(output1, weight_block.att.time_first, weight_block.att.time_decay, weight_block.att.time_mix_k, weight_block.att.time_mix_v, weight_block.att.time_mix_r, weight_block.att.r_weight, weight_block.att.k_weight, weight_block.att.v_weight, weight_block.att.o_weight, weight_block.att.r_vec_mr, weight_block.att.r_vec_mk, weight_block.att.r_vec_mv, weight_block.att.r_vec_mo, state.aa, state.bb, state.pp, state.xx, output2);
-// 	output2 = x + output2;
-// 	Layer_Norm_vector(output2, weight_block.ln2.weight, weight_block.ln2.bias, output3);
-// 	FF(output3, weight_block.ffn.time_mix_k, weight_block.ffn.time_mix_r, weight_block.ffn.r_weight, weight_block.ffn.k_weight, weight_block.ffn.v_weight, weight_block.ffn.r_vec_mr, weight_block.ffn.r_vec_mk, weight_block.ffn.r_vec_mv, state.xx_ffn, output);
-// 	output = output + output2;
-// }
+
+
+
+
+
+
+
+
+
+
+
 
 
 void read_matrix(int8_t* input, hls::stream<t_int8Vec_1>& output, int size){
@@ -1666,7 +1651,7 @@ void read_matrix(int8_t* input, hls::stream<t_int8Vec_1>& output, int size){
 		#pragma hls pipeline
 		t_int8Vec_1 output_i;
 		for(int j = 0; j < stream_kernel_int8_1; j++){
-			// #pragma hls unroll factor=16 skip_exit_check
+			
 			output_i[j] = input[i * stream_kernel_int8_1 + j];
 		}
 		output << output_i;
@@ -1679,7 +1664,7 @@ void read_matrix_large(int8_t* input, hls::stream<t_int8Vec_1>& output, int size
 		#pragma hls pipeline
 		t_int8Vec_1 output_i;
 		for(int j = 0; j < stream_kernel_int8_1; j++){
-			// #pragma hls unroll factor=16 skip_exit_check
+			
 			output_i[j] = input[i * stream_kernel_int8_1 + j];
 		}
 		output << output_i;
@@ -1692,7 +1677,7 @@ void read_vectors(float* input, hls::stream<t_floatVec_0>& output, int size){
 		#pragma hls pipeline
 		t_floatVec_0 output_i;
 		for(int j = 0; j < stream_kernel_float_0; j++){
-			// #pragma hls unroll factor=16 skip_exit_check
+			
 			output_i[j] = input[i * stream_kernel_float_0 + j];
 		}
 		output << output_i;
@@ -1724,28 +1709,29 @@ void write_vectors(hls::stream<t_floatVec_0>& output, float* input, int size){
 		t_floatVec_0 output_i = output.read();
 		for(int j = 0; j < stream_kernel_float_0; j++){
 			#pragma hls pipeline
-			// #pragma hls unroll factor=16 skip_exit_check
+			
 			input[i * stream_kernel_float_0 + j] = output_i[j];
 		}
 	}
 }
 
-void read_all(State_s& state_in, WeightBlock_s& weight_block, hls::stream<t_floatVec_0>& x, float* x_, float* xx, float* xx_ffn, float* aa, float* bb, float* pp, float* ln1_weight, float* ln1_bias, float* ln2_weight, float* ln2_bias, int8_t* att_r_weight, int8_t* att_k_weight, int8_t* att_v_weight, int8_t* att_o_weight, float* att_time_mix_k, float* att_time_mix_v, float* att_time_mix_r, float* att_time_first, float* att_time_decay, float* att_r_vec_mr, float* att_r_vec_mk, float* att_r_vec_mv, float* att_r_vec_mo, int8_t* ffn_r_weight, int8_t* ffn_k_weight, int8_t* ffn_v_weight, float* ffn_time_mix_k, float* ffn_time_mix_r, float* ffn_r_vec_mr, float* ffn_r_vec_mk, float* ffn_r_vec_mv){
+void read_all(State_s& state_in, WeightBlock_s& weight_block, hls::stream<t_floatVec_0>& x, float* x_, float* xx, float* xx_ffn, float* aa, float* bb, float* pp, float* ln1_weight, float* ln1_bias, float* ln2_weight, float* ln2_bias, int8_t* att_r_weight, int8_t* att_k_weight, int8_t* att_v_weight, int8_t* att_o_weight, float* att_time_mix_k, float* att_time_mix_v, float* att_time_mix_r, float* att_time_first, float* att_time_decay, float* att_r_vec_mr, float* att_r_vec_mk, float* att_r_vec_mv, float* att_r_vec_mo, int8_t* ffn_r_weight, int8_t* ffn_k_weight, int8_t* ffn_v_weight, float* ffn_time_mix_k, float* ffn_time_mix_r, float* ffn_r_vec_mr, float* ffn_r_vec_mk, float* ffn_r_vec_mv, int sel){
+    #pragma HLS INTERFACE ap_none port=sel
     read_vectors(x_, x, n_embed/32);
-	// Read state vectors
+	
     read_vectors(xx, state_in.xx, n_embed/32);
     read_vectors(xx_ffn, state_in.xx_ffn, n_embed/32);
     read_vectors(aa, state_in.aa, n_embed/32);
     read_vectors(bb, state_in.bb, n_embed/32);
     read_vectors(pp, state_in.pp, n_embed/32);
     
-    // Read weight vectors for ln1 and ln2
+    
     read_vectors(ln1_weight, weight_block.ln1.weight, n_embed/32);
     read_vectors(ln1_bias, weight_block.ln1.bias, n_embed/32);
     read_vectors(ln2_weight, weight_block.ln2.weight, n_embed/32);
     read_vectors(ln2_bias, weight_block.ln2.bias, n_embed/32);
     
-    // Read weight vectors for att
+    
     read_matrix(att_r_weight, weight_block.att.r_weight, n_embed*n_embed/32);
     read_matrix(att_k_weight, weight_block.att.k_weight, n_embed*n_embed/32);
     read_matrix(att_v_weight, weight_block.att.v_weight, n_embed*n_embed/32);
@@ -1760,7 +1746,7 @@ void read_all(State_s& state_in, WeightBlock_s& weight_block, hls::stream<t_floa
 	read_vectors_rvec(att_r_vec_mv, weight_block.att.r_vec_mv, n_embed*group_num);
 	read_vectors_rvec(att_r_vec_mo, weight_block.att.r_vec_mo, n_embed*group_num);
     
-    // Read weight vectors for ffn
+    
     read_matrix(ffn_r_weight, weight_block.ffn.r_weight, n_embed*n_embed/32);
     read_matrix(ffn_k_weight, weight_block.ffn.k_weight, n_embed*n_embed_large/32);
     read_matrix(ffn_v_weight, weight_block.ffn.v_weight, n_embed*n_embed_large/32);
@@ -1772,35 +1758,35 @@ void read_all(State_s& state_in, WeightBlock_s& weight_block, hls::stream<t_floa
 }
 
 void write_all(State_s& state_out,hls::stream<t_floatVec_0>& output_,float* output, float* xx, float* xx_ffn, float* aa, float* bb, float* pp){
-	// Write state vectors
+	
 	write_vectors(state_out.xx, xx, n_embed/32);
 	write_vectors(state_out.xx_ffn, xx_ffn, n_embed/32);
 	write_vectors(state_out.aa, aa, n_embed/32);
 	write_vectors(state_out.bb, bb, n_embed/32);
 	write_vectors(state_out.pp, pp, n_embed/32);
 	
-	// Write output
+	
 	write_vectors(output_, output, n_embed/32);
 }
 
 void weight_consume(WeightBlock_s& weight_block, State_s& state_in, State_s& state_out){
-	// t_floatVec_0 ln1_weight = weight_block.ln1.weight.read();
-	// t_floatVec_0 ln1_bias = weight_block.ln1.bias.read();
+	
+	
 	t_floatVec_0 ln2_weight = weight_block.ln2.weight.read();
 	t_floatVec_0 ln2_bias = weight_block.ln2.bias.read();
-	// t_floatVec_0 tmk = weight_block.att.time_mix_k.read();
-	// t_floatVec_0 tmv = weight_block.att.time_mix_v.read();
-	// t_floatVec_0 tmr = weight_block.att.time_mix_r.read();
-	// t_floatVec_0 t_f = weight_block.att.time_first.read();
-	// t_floatVec_0 t_d = weight_block.att.time_decay.read();
-	// t_int8Vec_1	r_w = weight_block.att.r_weight.read();
-	// t_int8Vec_1	k_w = weight_block.att.k_weight.read();
-	// t_int8Vec_1 v_w = weight_block.att.v_weight.read();
-	// t_int8Vec_1 o_w = weight_block.att.o_weight.read();
-	// float	mr = weight_block.att.r_vec_mr.read();
-	// float	mk = weight_block.att.r_vec_mk.read();
-	// float	mv = weight_block.att.r_vec_mv.read();
-	// float	mo = weight_block.att.r_vec_mo.read();
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	t_floatVec_0 tmk_f = weight_block.ffn.time_mix_k.read();
 	t_floatVec_0 tmr_f = weight_block.ffn.time_mix_r.read();
 	t_int8Vec_1	r_w_f = weight_block.ffn.r_weight.read();
@@ -1811,15 +1797,15 @@ void weight_consume(WeightBlock_s& weight_block, State_s& state_in, State_s& sta
 	float	mv_f = weight_block.ffn.r_vec_mv.read();
 	t_floatVec_0	xx_ffn = state_in.xx_ffn.read();
 	state_out.xx_ffn.write(0);
-	// t_floatVec_0	y = x.read();
+	
 }
 
 void layer_common_s(State_s& state_in, State_s& state_out,WeightBlock_s& weight_block, hls::stream<t_floatVec_0>& x, hls::stream<t_floatVec_0>& output){
-	// #pragma HLS INTERFACE axis port=weight_block
-	// #pragma HLS INTERFACE axis port=state_in
-	// #pragma HLS INTERFACE axis port=state_out
-	// #pragma HLS INTERFACE axis port=x
-	// #pragma HLS INTERFACE axis port=output
+	
+	
+	
+	
+	
 	#pragma HLS dataflow
 	hls::stream<t_floatVec_0> output1;
 	hls::stream<t_floatVec_0> output2;
@@ -1940,8 +1926,8 @@ void rwkv_top(float* x_, float* xx, float* xx_ffn, float* aa, float* bb, float* 
 	#pragma HLS clkdomain clk2 2
 	layer_common_s(state_in,state_out, weight_block, x, output_);
 	#pragma HLS clkdomain clk3 30
-	// write_vectors(output_,output,n_embed/32);
-	// weight_consume(weight_block,x);
+	
+	
 	write_all(state_out,output_, output, xx_o, xx_ffn_o, aa_o, bb_o, pp_o);
 }
 }
