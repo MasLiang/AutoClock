@@ -119,9 +119,9 @@ def gen_async_fifo_inst(module_name, factors):
 
     lst_inst.append(module_name+"_wrapper "+module_name+"(")
     lst_inst.append("    .dout          ("+module_name+"_dout),")
-    lst_inst.append("    .empty         ("+module_name+"_empty,")
+    lst_inst.append("    .empty         ("+module_name+"_empty),")
     lst_inst.append("    .rd_clk        ("+module_name+"_rd_clk),")
-    lst_inst.append("    .rd_en         ("+module_name+"_rd_en,")
+    lst_inst.append("    .rd_en         ("+module_name+"_rd_en),")
     lst_inst.append("    .din           ("+module_name+"_din),")
     lst_inst.append("    .full          ("+module_name+"_full),")
     lst_inst.append("    .wr_clk        ("+module_name+"_wr_clk),")
@@ -130,8 +130,8 @@ def gen_async_fifo_inst(module_name, factors):
 
     return [lst_wire, lst_inst]
 
-#factor = ["auto", 16, 16, 16, 16]
-#bbb = gen_async_fifo_inst("aaa", factor)
-#for i in bbb:
-#    for j in i:
-#        print(j)
+factor = ["auto", 16, 16, 16, 16]
+bbb = gen_async_fifo_inst("aaa", factor)
+for i in bbb:
+    for j in i:
+        print(j)
