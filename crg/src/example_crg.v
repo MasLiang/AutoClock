@@ -13,13 +13,13 @@ module example_crg{
 );
 
 
+wire	mmcm0_clk_out0;
+wire	mmcm0_clk_out1;
+wire	mmcm0_clk_out2;
+wire	mmcm0_clk_in0;
+wire	mmcm0_reset;
+wire	mmcm0_locked;
 
-wire	pll0_clk_in0;
-wire	pll0_clk_in1;
-wire	pll0_clk_out0;
-wire	pll0_clk_out1;
-wire	pll0_reset;
-wire	pll0_locked;
 
 wire    div_clk3_o;
 wire    div_clk3_ce;
@@ -30,6 +30,10 @@ wire	mux_clk1_clk_in_0;
 wire	mux_clk1_clk_in_1;
 wire	mux_clk1_clk_out;
 wire	mux_clk1_sel;
+wire	mux_clk1_1_temp_clk_in_0;
+wire	mux_clk1_1_temp_clk_in_1;
+wire	mux_clk1_1_temp_clk_out;
+wire	mux_clk1_1_temp_sel;
 
 wire	bufgce_clk2_clk_in;
 wire	bufgce_clk2_clk_out;
@@ -45,14 +49,14 @@ wire    clk3_dest_arst;
 wire    clk3_src_arst;
 wire    clk3_dest_clk;
 
+mmcm0_wrapper mmcm0(
+   .clk_out0   (mmcm0_clk_out0),
+   .clk_out1   (mmcm0_clk_out1),
+   .clk_out2   (mmcm0_clk_out2),
+   .clk_in0    (mmcm0_clk_in0)
+   .reset      (mmcm0_reset),
+   .locked     (mmcm0_locked));
 
-pll0_wrapper pll0(
-	.clk_in0	(pll0_clk_in0),
-	.clk_in1	(pll0_clk_in1),
-	.clk_out0	(pll0_clk_out0),
-	.clk_out1	(pll0_clk_out1),
-	.reset		(pll0_reset),
-	.locked		(pll0_locked));
 
 BUFGCE_DIV #(
    .BUFGCE_DIVIDE      (3.0),
@@ -71,6 +75,12 @@ BUFGMUX mux_clk1(
 	.I1		(mux_clk1_clk_in_1),
 	.O		(mux_clk1_clk_out),
 	.S		(mux_clk1_sel));
+
+BUFGMUX mux_clk1_1_temp(
+	.I0		(mux_clk1_1_temp_clk_in_0),
+	.I1		(mux_clk1_1_temp_clk_in_1),
+	.O		(mux_clk1_1_temp_clk_out),
+	.S		(mux_clk1_1_temp_sel));
 
 
 BUFGCE bufgce_clk2(
@@ -109,7 +119,7 @@ xpm_cdc_async_rst #(
 );
 
 
-assign    bufgce_clk2_clk_in            =    pll0_clk_out0;
+assign    bufgce_clk2_clk_in            =    mmcm0_clk_out0;
 assign    bufgce_clk2_gce               =    clk2_cen;
 assign    clk1                          =    mux_clk1_clk_out;
 assign    clk1_0                        =    clk_src;
@@ -117,12 +127,16 @@ assign    clk1_dest_clk                 =    clk1;
 assign    clk1_src_arst                 =    rst_n;
 assign    clk2                          =    bufgce_clk2_clk_out;
 assign    clk2_dest_clk                 =    clk2;
-assign    clk2_src_arst                 =    rst_n;
+assign    clk2_src_arst                 =    rst_n & mmcm0_locked;
 assign    clk3                          =    div_clk3_o;
 assign    clk3_dest_clk                 =    clk3;
 assign    clk3_src_arst                 =    rst_n;
 assign    div_clk3_i                    =    clk_src;
-assign    mux_clk1_clk_in_0             =    pll0_clk_out1;
+assign    mmcm0__clk_in0                =    clk_src;
+assign    mmcm0_reset                   =    !rst_n_sys;
+assign    mux_clk1_1_temp_clk_in_0      =    mmcm0_clk_out2;
+assign    mux_clk1_1_temp_clk_in_1      =    mmcm0_clk_out1;
+assign    mux_clk1_clk_in_0             =    mux_clk1_1_temp_clk_out;
 assign    mux_clk1_clk_in_1             =    clk1_0;
 assign    mux_clk1_sel                  =    clk1_sel;
 assign    rst_n_clk1                    =    clk1_dest_arst;

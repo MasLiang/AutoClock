@@ -223,7 +223,14 @@ def crg_gen(file):
         lst_rst_sync_wire += lst_rst_sync[0]
         lst_rst_sync_inst += lst_rst_sync[1]
         lst_rst_sync_inst += ["\n"]
-        lst_assign.append(f'''{'assign    '+clk+'_src_arst':<40}=    rst_n;''')
+        for unit_idx in range(len(clk_map_mmcm[src_clk])):
+            if clk in clk_map_mmcm[src_clk][unit_idx][1]:
+                if clk_map_mmcm[src_clk][unit_idx][0]=="pll":
+                    lst_assign.append(f'''{'assign    '+clk+'_src_arst':<40}=    rst_n & pll{unit_idx}_locked;''')
+                else:
+                    lst_assign.append(f'''{'assign    '+clk+'_src_arst':<40}=    rst_n & mmcm{unit_idx}_locked;''')
+            else:
+                lst_assign.append(f'''{'assign    '+clk+'_src_arst':<40}=    rst_n;''')
         lst_assign.append(f'''{'assign    rst_n_'+clk:<40}=    {clk}_dest_arst;''')
         lst_assign.append(f'''{'assign    '+clk+'_dest_clk':<40}=    {clk};''')
 
