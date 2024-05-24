@@ -5,12 +5,10 @@ def extract_clk_domains(file_path):
     periods = []
     modules = []
     domains_sel_if = {}
-    domains_gce_if = {}
 
     # extract HLS pragma
     domain_pattern = r'\s*#pragma \s*HLS \s*clkdomain \s*(\w+(?:_\w+)*)\s*(\d+(?:\s+\d+)*)'
     sel_pattern = r'\s*#pragma\s*HLS\s*clksel\s*(\w+)\s*(\w+)'
-    gce_pattern = r'\s*#pragma\s*HLS\s*clken\s*(\w+)\s*(\w+)'
     with open(file_path, 'r') as file:
         for line in file:
             # remove comment lines
@@ -31,10 +29,6 @@ def extract_clk_domains(file_path):
                 match_mux = re.match(sel_pattern, next_line)
                 if match_mux:
                     domains_sel_if[match_mux.group(1)] = [match_mux.group(2)]
-                # extract the interface signel used for clk en
-                match_gce = re.match(gce_pattern, next_line)
-                if match_gce:
-                    domains_gce_if[match_gce.group(1)] = [match_gce.group(2)]
                 # check the function name
                 while next_line.strip() == "" or re.match(r"\s*#pragma \s*HLS*",next_line):
                     next_line = file.readline()
@@ -44,17 +38,14 @@ def extract_clk_domains(file_path):
                     modules.append(module)
                     if match_mux:
                         domains_sel_if[match_mux.group(1)].append(module)
-                    if match_gce:
-                        domains_gce_if[match_gce.group(1)].append(module)
                 else:
                     modules.append("Unknown")
 
         domains, modules = clk_domains_map(clk_domains, periods, modules)
     
-    check_mux_gce_if(domains_sel_if, file_path)
-    check_mux_gce_if(domains_gce_if, file_path)
+    check_mux_if(domains_sel_if, file_path)
 
-    return modules, domains, domains_sel_if, domains_gce_if
+    return modules, domains, domains_sel_if
 
 def clk_domains_map(clk_domains, periods, modules):
     num_domains = len(clk_domains)
@@ -68,8 +59,8 @@ def clk_domains_map(clk_domains, periods, modules):
 
     return clk_period_map, module_clk_map
         
-def check_mux_gce_if(domains_if, file_path):
-    # This function is to check the clk mux/gce interface signals
+def check_mux_if(domains_if, file_path):
+    # This function is to check the clk mux interface signals
     #   the type must by ap_none, no matter what the user defined
     #   type is. If user defined other type, change it.
     #   find the clk domain -> 

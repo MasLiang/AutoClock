@@ -13,9 +13,6 @@ def gen_plle4_file(module_name, factors):
     lst_port = []
     lst_wire = []
     lst_inst = []
-    # input clock is output of IBUF outside of this module. 
-    # IBUF is used at the begining of CRG.
-    #lst_ibuf = []
     lst_bufg = []
     lst_port.append("module "+module_name+"_wrapper(")
 
@@ -34,17 +31,6 @@ def gen_plle4_file(module_name, factors):
     lst_port.append("	output		locked")
 
     lst_port.append(");")
-
-    ## input initial
-    #lst_wire.append("wire	clk_in0_ibuf;")
-    #lst_ibuf.append("IBUF clkin0_ibuf")
-    #lst_ibuf.append("(	.O	(clk_in0_ibuf),")
-    #lst_ibuf.append("	.I 	(clk_in0))")
-    #if(clkin_num>1):
-    #    lst_wire.append("wire	clk_in1_ibuf;")
-    #    lst_ibuf.append("IBUF clkin1_ibuf")
-    #    lst_ibuf.append("(	.O	(clk_in1_ibuf),")
-    #    lst_ibuf.append(" 	.I 	(clk_in1))")
 
     # inter wire
     lst_wire.append("wire	clk_out0_pri;")	
@@ -96,7 +82,7 @@ def gen_plle4_file(module_name, factors):
         lst_inst.append("	.CLKOUT1             (clk_out1_unused),")
     lst_inst.append("	.CLKOUT1B            (clkout1b_unused),")
     lst_inst.append("	.CLKFBIN             (clkfbout_clk),")
-    lst_inst.append("	.CLKIN               (clk_in0_ibuf),")
+    lst_inst.append("	.CLKIN               (clk_in0),")
     lst_inst.append("	.DADDR               (7'h0),")
     lst_inst.append("	.DCLK                (1'b0),")
     lst_inst.append("	.DEN                 (1'b0),")
@@ -115,7 +101,7 @@ def gen_plle4_file(module_name, factors):
 
     # generate file of this module
     with open(module_name+".v", "w") as f:
-        for i in (lst_port + ["\n"] + lst_wire + ["\n"] + lst_ibuf + ["\n"] + lst_inst + ["\n"] + lst_bufg):
+        for i in (lst_port + ["\n"] + lst_wire + ["\n"] + ["\n"] + lst_inst + ["\n"] + lst_bufg):
             f.write(i)
             f.write("\n")
 

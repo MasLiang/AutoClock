@@ -8,7 +8,6 @@ module mmcm0_wrapper(
  );
 
 
-wire           clk_in0_ibuf;
 wire           clk_out0_pri;
 wire           clk_out1_pri;
 wire           clk_out2_pri;
@@ -27,11 +26,6 @@ wire           clkout2b_unused;
 wire           clkout3b_unused;
 wire           clkfbstopped_unused;
 wire           clkinstopped_unused;
-
-
-IBUF clkin0_ibuf
-(  .O (clk_in0_ibuf),
-   .I (clk_in0));
 
 
 MMCME4_ADV #(
@@ -87,7 +81,7 @@ mmcme4_adv_inst(
    .CLKOUT5                (clk_out5_unused),
    .CLKOUT6                (clk_out6_unused),
    .CLKFBIN                (clkfbout_clk),
-   .CLKIN1                 (clk_in0_ibuf),
+   .CLKIN1                 (clk_in0),
    .CLKIN2                 (1'b0),
    .CLKINSEL               (1'b1),
    .DADDR                  (7'h0),

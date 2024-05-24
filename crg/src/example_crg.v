@@ -1,10 +1,12 @@
 module example_crg{
    input       clk1_sel,
+   input       clk1_en,
    output      clk1,
    output      rst_n_clk1,
-   input       clk2_cen,
+   input       clk2_en,
    output      clk2,
    output      rst_n_clk2,
+   input       clk3_en,
    output      clk3,
    output      rst_n_clk3,
 
@@ -37,9 +39,15 @@ wire	mux_clk1_1_temp_clk_in_1;
 wire	mux_clk1_1_temp_clk_out;
 wire	mux_clk1_1_temp_sel;
 
+wire	bufgce_clk1_clk_in;
+wire	bufgce_clk1_clk_out;
+wire	bufgce_clk1_gce;
 wire	bufgce_clk2_clk_in;
 wire	bufgce_clk2_clk_out;
 wire	bufgce_clk2_gce;
+wire	bufgce_clk3_clk_in;
+wire	bufgce_clk3_clk_out;
+wire	bufgce_clk3_gce;
 
 wire    clk1_dest_arst;
 wire    clk1_src_arst;
@@ -89,10 +97,18 @@ BUFGMUX mux_clk1_1_temp(
 	.S		(mux_clk1_1_temp_sel));
 
 
+BUFGCE bufgce_clk1(
+	.I			(bufgce_clk1_clk_in),
+	.O			(bufgce_clk1_clk_out),
+	.CE			(bufgce_clk1_gce));
 BUFGCE bufgce_clk2(
 	.I			(bufgce_clk2_clk_in),
 	.O			(bufgce_clk2_clk_out),
 	.CE			(bufgce_clk2_gce));
+BUFGCE bufgce_clk3(
+	.I			(bufgce_clk3_clk_in),
+	.O			(bufgce_clk3_clk_out),
+	.CE			(bufgce_clk3_gce));
 
 xpm_cdc_async_rst #(
    .DEST_SYNC_FF       (2),
@@ -125,16 +141,20 @@ xpm_cdc_async_rst #(
 );
 
 
+assign    bufgce_clk1_clk_in            =    mux_clk1_clk_out;
+assign    bufgce_clk1_gce               =    clk1_en;
 assign    bufgce_clk2_clk_in            =    mmcm0_clk_out0;
-assign    bufgce_clk2_gce               =    clk2_cen;
-assign    clk1                          =    mux_clk1_clk_out;
+assign    bufgce_clk2_gce               =    clk2_en;
+assign    bufgce_clk3_clk_in            =    div_clk3_o;
+assign    bufgce_clk3_gce               =    clk3_en;
+assign    clk1                          =    bufgce_clk1_clk_out;
 assign    clk1_0                        =    clk_src_ibuf;
 assign    clk1_dest_clk                 =    clk1;
 assign    clk1_src_arst                 =    rst_n;
 assign    clk2                          =    bufgce_clk2_clk_out;
 assign    clk2_dest_clk                 =    clk2;
 assign    clk2_src_arst                 =    rst_n & mmcm0_locked;
-assign    clk3                          =    div_clk3_o;
+assign    clk3                          =    bufgce_clk3_clk_out;
 assign    clk3_dest_clk                 =    clk3;
 assign    clk3_src_arst                 =    rst_n;
 assign    div_clk3_i                    =    clk_src_ibuf;
