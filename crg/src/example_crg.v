@@ -13,6 +13,8 @@ module example_crg{
 );
 
 
+wire    clk_src_ibuf;
+
 wire	mmcm0_clk_out0;
 wire	mmcm0_clk_out1;
 wire	mmcm0_clk_out2;
@@ -48,6 +50,10 @@ wire    clk2_dest_clk;
 wire    clk3_dest_arst;
 wire    clk3_src_arst;
 wire    clk3_dest_clk;
+
+IBUF clkin_ibuf
+(    .o    (clk_src_ibuf),
+     .I    (clk_src))
 
 mmcm0_wrapper mmcm0(
    .clk_out0   (mmcm0_clk_out0),
@@ -122,7 +128,7 @@ xpm_cdc_async_rst #(
 assign    bufgce_clk2_clk_in            =    mmcm0_clk_out0;
 assign    bufgce_clk2_gce               =    clk2_cen;
 assign    clk1                          =    mux_clk1_clk_out;
-assign    clk1_0                        =    clk_src;
+assign    clk1_0                        =    clk_src_ibuf;
 assign    clk1_dest_clk                 =    clk1;
 assign    clk1_src_arst                 =    rst_n;
 assign    clk2                          =    bufgce_clk2_clk_out;
@@ -131,8 +137,8 @@ assign    clk2_src_arst                 =    rst_n & mmcm0_locked;
 assign    clk3                          =    div_clk3_o;
 assign    clk3_dest_clk                 =    clk3;
 assign    clk3_src_arst                 =    rst_n;
-assign    div_clk3_i                    =    clk_src;
-assign    mmcm0__clk_in0                =    clk_src;
+assign    div_clk3_i                    =    clk_src_ibuf;
+assign    mmcm0_clk_in0                 =    clk_src_ibuf;
 assign    mmcm0_reset                   =    !rst_n_sys;
 assign    mux_clk1_1_temp_clk_in_0      =    mmcm0_clk_out2;
 assign    mux_clk1_1_temp_clk_in_1      =    mmcm0_clk_out1;

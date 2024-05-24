@@ -20,7 +20,9 @@ def gen_mmcme4_file(module_name, factors):
     lst_port = []
     lst_wire = []
     lst_inst = []
-    lst_ibuf = []
+    # input clock is output of IBUF outside of this module. 
+    # IBUF is used at the begining of CRG.
+    #lst_ibuf = []
     lst_bufg = []
     lst_port.append("module "+module_name+"_wrapper(")
 	
@@ -45,16 +47,16 @@ def gen_mmcme4_file(module_name, factors):
     lst_port.append("  output        locked")
     lst_port.append(" );")
     
-    # input initial
-    lst_wire.append("wire           clk_in0_ibuf;")
-    lst_ibuf.append("IBUF clkin0_ibuf")
-    lst_ibuf.append("(  .O (clk_in0_ibuf),")
-    lst_ibuf.append("   .I (clk_in0));")
-    if(clkin_num>1):
-        lst_wire.append("wire           clk_in1_ibuf;")
-        lst_ibuf.append("IBUF clkin1_ibuf")
-        lst_ibuf.append("(  .O (clk_in1_ibuf),")
-        lst_ibuf.append("   .I (clk_in1));")
+    ## input initial
+    #lst_wire.append("wire           clk_in0_ibuf;")
+    #lst_ibuf.append("IBUF clkin0_ibuf")
+    #lst_ibuf.append("(  .O (clk_in0_ibuf),")
+    #lst_ibuf.append("   .I (clk_in0));")
+    #if(clkin_num>1):
+    #    lst_wire.append("wire           clk_in1_ibuf;")
+    #    lst_ibuf.append("IBUF clkin1_ibuf")
+    #    lst_ibuf.append("(  .O (clk_in1_ibuf),")
+    #    lst_ibuf.append("   .I (clk_in1));")
 
     # inter wire
     lst_wire.append("wire           clk_out0_pri;")
