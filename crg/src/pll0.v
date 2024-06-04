@@ -7,7 +7,6 @@ module pll0_wrapper(
 );
 
 
-wire	clk_in0_ibuf;
 wire	clk_out0_pri;
 wire	clk_out1_pri;
 wire		clk_out0b_unused;
@@ -16,9 +15,6 @@ wire [15:0] do_unused;
 wire        drdy_unused;
 
 
-IBUF clkin0_ibuf
-(	.O	(clk_in0_ibuf),
-	.I 	(clk_in0))
 
 
 PLLE4_ADV#(
@@ -47,7 +43,7 @@ plle4_adv_inst(
 	.CLKOUT1             (clk_out1_pri),
 	.CLKOUT1B            (clkout1b_unused),
 	.CLKFBIN             (clkfbout_clk),
-	.CLKIN               (clk_in0_ibuf),
+	.CLKIN               (clk_in0),
 	.DADDR               (7'h0),
 	.DCLK                (1'b0),
 	.DEN                 (1'b0),

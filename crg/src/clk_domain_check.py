@@ -7,20 +7,27 @@ def extract_clk_domains(file_path):
     domains_sel_if = {}
 
     # extract HLS pragma
+    input_clk_pattern = r'\s*#pragma \s*HLS \s*inputclk \s*(\w+(?:_\w+)*)\s*(\d+(?:\s+\d+)*)'
     domain_pattern = r'\s*#pragma \s*HLS \s*clkdomain \s*(\w+(?:_\w+)*)\s*(\d+(?:\s+\d+)*)'
     sel_pattern = r'\s*#pragma\s*HLS\s*clksel\s*(\w+)\s*(\w+)'
     with open(file_path, 'r') as file:
         for line in file:
+            input_clk_match = re.match(input_clk_pattern, line)
+            if input_clk_match:
+                clk_domain = input_clk_match.group(1)
+                period = input_clk_match.group(2)
+                clk_domains = [clk_domain] + clk_domains
+                periods = [period] + periods
             # remove comment lines
             if line.strip().startswith("//"):
                 continue
-            match = re.match(domain_pattern, line)
-            if match:
+            domain_match = re.match(domain_pattern, line)
+            if domain_match:
                 # divide clk_domain and period. It should be noted that the period is a 
                 # string which might contains more than one period. If there are more 
                 # than one period, it can be split into a list.
-                clk_domain = match.group(1)
-                period = match.group(2)
+                clk_domain = domain_match.group(1)
+                period = domain_match.group(2)
                 clk_domains.append(clk_domain)
                 periods.append(period)
 				
@@ -48,13 +55,16 @@ def extract_clk_domains(file_path):
     return modules, domains, domains_sel_if
 
 def clk_domains_map(clk_domains, periods, modules):
+    print(clk_domains)
+    print(periods)
     num_domains = len(clk_domains)
 
     module_clk_map = {}
     clk_period_map = {}
 
     for i in range(num_domains):
-        module_clk_map[modules[i]] = clk_domains[i]
+        if i >0:
+            module_clk_map[modules[i-1]] = clk_domains[i]
         clk_period_map[clk_domains[i]] = periods[i]
 
     return clk_period_map, module_clk_map

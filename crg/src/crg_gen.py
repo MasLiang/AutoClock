@@ -36,7 +36,7 @@ def crg_gen(file):
     lst_bufi_wire.append("wire    "+src_clk+"_ibuf;")
     lst_bufi_inst.append("IBUF clkin_ibuf")
     lst_bufi_inst.append("(    .o    ("+src_clk+"_ibuf),")
-    lst_bufi_inst.append("     .I    ("+src_clk+"))")
+    lst_bufi_inst.append("     .I    ("+src_clk+"));")
 
     print("clk_map_mux" , clk_map_mux)
     print("clk_map_bypass" , clk_map_bypass)
@@ -56,7 +56,7 @@ def crg_gen(file):
             lst_mmcm_wire += lst_mmcm[0]
             lst_mmcm_inst += lst_mmcm[1]
             lst_assign.append(f'''{'assign    mmcm'+str(unit_idx)+'_clk_in0':<40}=    {src_clk}_ibuf;''')
-            lst_assign.append(f'''{'assign    mmcm'+str(unit_idx)+'_reset':<40}=    !rst_n_sys;''')
+            lst_assign.append(f'''{'assign    mmcm'+str(unit_idx)+'_reset':<40}=    ~rst_n_sys;''')
         elif unit[0]=="pll":
             lst_pll = gen_plle4_inst("pll"+str(unit_idx),[clkin_period, clkout_num]+unit[2]+[0 for _ in range(2-clkout_num)])
             lst_pll_wire += lst_pll[0]
@@ -172,7 +172,7 @@ def crg_gen(file):
         lst_port.append("   input       "+clk+"_en,")
         lst_assign.append(f'''{'assign    bufgce_'+clk+'_gce':<40}=    {clk}_en;''')
         lst_port.append("   output      "+clk+",")
-        lst_port.append("   output      rst_n_"+clk+",")
+        lst_port.append("   output      rst_"+clk+",")
     lst_port.append("\n")
     lst_port.append("   input       "+src_clk+",")
     lst_port.append("   input       rst_n_sys")
@@ -224,12 +224,12 @@ def crg_gen(file):
         for unit_idx in range(len(clk_map_mmcm[src_clk])):
             if clk in clk_map_mmcm[src_clk][unit_idx][1]:
                 if clk_map_mmcm[src_clk][unit_idx][0]=="pll":
-                    lst_assign.append(f'''{'assign    '+clk+'_src_arst':<40}=    rst_n & pll{unit_idx}_locked;''')
+                    lst_assign.append(f'''{'assign    '+clk+'_src_arst':<40}=    ~(rst_n_sys & pll{unit_idx}_locked);''')
                 else:
-                    lst_assign.append(f'''{'assign    '+clk+'_src_arst':<40}=    rst_n & mmcm{unit_idx}_locked;''')
+                    lst_assign.append(f'''{'assign    '+clk+'_src_arst':<40}=    ~(rst_n_sys & mmcm{unit_idx}_locked);''')
             else:
-                lst_assign.append(f'''{'assign    '+clk+'_src_arst':<40}=    rst_n;''')
-        lst_assign.append(f'''{'assign    rst_n_'+clk:<40}=    {clk}_dest_arst;''')
+                lst_assign.append(f'''{'assign    '+clk+'_src_arst':<40}=    ~rst_n_sys;''')
+        lst_assign.append(f'''{'assign    rst_'+clk:<40}=    {clk}_dest_arst;''')
         lst_assign.append(f'''{'assign    '+clk+'_dest_clk':<40}=    {clk};''')
 
     lst_assign.sort()
