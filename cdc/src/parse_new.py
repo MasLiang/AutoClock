@@ -214,21 +214,25 @@ def find_mux_in(sig, mux_always_list):
     return mux_input, always
 
 def find_mux_out(sig, mux_always_list):
-    mux_input = []
+    mux_output = []
     for always in mux_always_list:
+        print("***************")
+        print(always.statement.statements[0].true_statement.statements[0].right.var)
+        print(always.statement.statements[0].true_statement.statements[0].left.var)
+        print(sig)
         if always.statement.statements[0].true_statement.statements[0].right.var==sig:
             for states in always.statement.statements:
                 var = states.true_statement.statements[0].left.var
-                mux_input.append(var)
+                mux_output.append(var)
                 while (isinstance(states.false_statement, ast.IfStatement)):
                     states = states.false_statement
                     var = states.true_statement.statements[0].right.var
-                    mux_input.append(var)
+                    mux_output.append(var)
                 var = states.false_statement.statements[0].right.var
-                mux_input.append(var)
+                mux_output.append(var)
             break
 
-    return mux_input, always
+    return mux_output, always
 
 def modify_ram_1w1r(inst, main_module_list, module_map, mux_always_list):
     for portarg in inst.portlist:
@@ -345,7 +349,7 @@ def modify_ram_1w1r(inst, main_module_list, module_map, mux_always_list):
 
             return [we_mux_always, address_mux_always, d_mux_always, q_mux_always]
                     
-def extrace_always_naming_rule(always, naming_rules, clk_domain):
+def extrace_always_naming_rule(always, naming_rules, clk_domain, direction):
     # find not needed true_statement of a statement, using the false_statement to replace 
     #  the statement
     temp_always = copy.deepcopy(always)
@@ -354,7 +358,12 @@ def extrace_always_naming_rule(always, naming_rules, clk_domain):
         states = always.statement.statements[states_idx]
         temp_states = temp_always.statement.statements[states_idx]
         while(True):
-            var = states.true_statement.statements[0].right.var
+            if direction=="in":
+                var = states.true_statement.statements[0].right.var
+            elif direction=="out":
+                var = states.true_statement.statements[0].left.var
+            print(direction)
+            print(var)
             for naming_rule in naming_rules:
                 name_match = re.search(naming_rule, var.name)
                 if name_match:
@@ -530,7 +539,6 @@ def modify_ram_common(inst, main_module_list, module_map, mux_always_list):
         naming_rules = []
         # using naming rule to match other ports
         for ce_sig in port[7]:
-            print(ce_sig)
             ce_pattern = f'(\w+)_(\w+)(\d+)'
             ce_match = re.search(ce_pattern, ce_sig)
             naming_rules.append(rf'{ce_match.group(1)}_(\w+){ce_match.group(3)}')
@@ -544,31 +552,38 @@ def modify_ram_common(inst, main_module_list, module_map, mux_always_list):
                 port.append(temp_sig_always)
                 port.append(temp_sig_mux_in)
                 continue
-            # 4 is output of the bram, others are input
-            if sig_idx==4:
-                sig_mux_out, sig_mux_always = find_mux_out(port[sig_idx], mux_always_list)
-                continue
-            else:
-                sig = port[sig_idx].name
-                # must connect to a module directly
-                if sig[0:4]!="temp":
-                    print(naming_rules, sig)
-                    for naming_rule in naming_rules:
-                        sig_match = re.search(naming_rule, sig)
-                        if sig_match:
-                            break
+
+            sig = port[sig_idx].name
+            # must connect to a module directly
+            if sig[0:4]!="temp":#TODO, some temp signals are connected to modules directly
+                for naming_rule in naming_rules:
+                    sig_match = re.search(naming_rule, sig)
                     if sig_match:
-                        port[sig_idx] = sig
-                        temp_sig_type = "bypass"
-                        temp_sig_mux_in = []
-                        temp_sig_always = []
-                    # can not find a signals because of clock domain
-                    else:
-                        port[sig_idx] = ''
-                        temp_sig_type = "none"
-                        temp_sig_mux_in = []
-                        temp_sig_always = []
-                # connect to a mux
+                        break
+                if sig_match:
+                    port[sig_idx] = sig
+                    temp_sig_type = "bypass"
+                    temp_sig_mux_in = []
+                    temp_sig_always = []
+                # can not find a signals because of clock domain
+                else:
+                    port[sig_idx] = ''
+                    temp_sig_type = "none"
+                    temp_sig_mux_in = []
+                    temp_sig_always = []
+                port.append(temp_sig_type)
+                port.append(temp_sig_always)
+                port.append(temp_sig_mux_in)
+            # connect to a mux
+            else:
+                # 4 is output of the bram, others are input
+                if sig_idx==4:
+                    print(port[sig_idx])
+                    sig_mux_out, sig_mux_always = find_mux_out(port[sig_idx], mux_always_list)
+                    temp_sig_always, temp_sig_mux_in = extrace_always_naming_rule(sig_mux_always, naming_rules, clk_domain, "out")
+                    port.append(temp_sig_type)
+                    port.append(temp_sig_always)
+                    port.append(temp_sig_mux_out)
                 else:
                     sig_mux_in, sig_mux_always = find_mux_in(port[sig_idx], mux_always_list)
                     # this is a data gate
@@ -587,10 +602,10 @@ def modify_ram_common(inst, main_module_list, module_map, mux_always_list):
                     # this is a real mux
                     else:
                         temp_sig_type = "mux"
-                        temp_sig_always, temp_sig_mux_in = extrace_always_naming_rule(sig_mux_always, naming_rules, clk_domain)
-                port.append(temp_sig_type)
-                port.append(temp_sig_always)
-                port.append(temp_sig_mux_in)
+                        temp_sig_always, temp_sig_mux_in = extrace_always_naming_rule(sig_mux_always, naming_rules, clk_domain, "in")
+                    port.append(temp_sig_type)
+                    port.append(temp_sig_always)
+                    port.append(temp_sig_mux_in)
         port.append(clk_domain)
         new_port_list.append(port)
     
