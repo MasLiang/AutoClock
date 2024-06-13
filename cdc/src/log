@@ -1,3 +1,0 @@
-[temp_xin1_V_ce0, temp_xin1_V_we0, temp_xin1_V_address0, grp_nondf_kernel_2mm_fu_114_xin_d0, temp_xin1_V_q0, 'mux', <pyverilog.vparser.ast.Always object at 0x72a249141ee0>, ['grp_nondf_kernel_2mm_fu_114_xin_ce0'], 'clk_ndf']
-[temp_xin1_V_ce0, temp_xin1_V_we0, temp_xin1_V_address0, grp_nondf_kernel_2mm_fu_114_xin_d0, temp_xin1_V_q0, 'mux', <pyverilog.vparser.ast.Always object at 0x72a2490876a0>, ['grp_kernel3_x1_fu_106_B_ce0'], 'clk_df1']
-[temp_xin1_V_ce1, '', grp_kernel3_x1_fu_106_B_address1, '', temp_xin1_V_q1, 'mux', <pyverilog.vparser.ast.Always object at 0x72a249079220>, ['grp_kernel3_x1_fu_106_B_ce1'], 'clk_df1']
