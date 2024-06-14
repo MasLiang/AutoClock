@@ -1,20 +1,18 @@
-#In this file, the connection between different instances are determained
-
 from pyverilog.vparser.parser import parse as rtl_parse
-from pyverilog.vparser.parser import VerilogParser
-from template.async_dpram import *
+#from cdc.src.template.async_dpram import *
+from parser import *
 import pyverilog.vparser.ast as ast
 import os
 import copy
 import re
 
-
-def modify_main_module_clk(inst, module_map):
+   
+def modify_only_module_clk(inst, clk_domain):
     for portarg in inst.portlist:
         if portarg.portname=="ap_clk":
-            portarg.argname = module_map[inst.name]
+            portarg.argname = clk_domain
         elif portarg.portname=="ap_rst":
-            portarg.argname = "rst_"+module_map[inst.name]
+            portarg.argname = "rst_"+clk_domain
   
     
 def modify_fifo_clk(inst, main_module_list, module_map):
@@ -33,11 +31,7 @@ def modify_fifo_clk(inst, main_module_list, module_map):
                 rd_clk = module_map[module_name]
 
     if wr_clk==rd_clk:
-        for portarg in inst.portlist:
-            if portarg.portname=="clk":
-                portarg.argname = wr_clk
-            elif portarg.portname=="reset":
-                portarg.argname = "rst_"+wr_clk
+        modify_only_module_clk(inst, wr_clk)
     else:
         fifo_name = inst.name
         match = re.search(r'(\w+)_w(\d+)_d(\d+)_A(\w+)', fifo_name)
@@ -61,6 +55,7 @@ def modify_fifo_clk(inst, main_module_list, module_map):
             inst.portlist.append(temp_portarg)
             break
 
+'''
 def modify_ram_only_clk_rst(inst, ce_clk):
     for portarg in inst.portlist:
         if portarg=="clk":
@@ -88,47 +83,6 @@ def replace_async_ram(inst, port_dic):
     for new_inst in new_instances:
         inst = new_inst
 
-def find_mux_in(sig, mux_always_list):
-    mux_input = []
-    for always in mux_always_list:
-        if always.statement.statements[0].true_statement.statements[0].left.var==sig:
-            for states in always.statement.statements:
-                var = states.true_statement.statements[0].right.var
-                if isinstance(var, ast.IntConst) and (var.value!="'bx" or var.value!="1'b0"):
-                    continue
-                mux_input.append(var)
-                while (isinstance(states.false_statement, ast.IfStatement)):
-                    states = states.false_statement
-                    var = states.true_statement.statements[0].right.var
-                    if isinstance(var, ast.IntConst) and (var.value!="'bx" or var.value!="1'b0"):
-                        continue
-                    mux_input.append(var)
-                var = states.false_statement.statements[0].right.var
-                if isinstance(var, ast.IntConst) and (var.value!="'bx" or var.value!="1'b0"):
-                    continue
-                mux_input.append(var)
-            break
-
-    return mux_input, always
-
-def find_mux_out(sig, mux_always_list):
-    mux_output = []
-    for always in mux_always_list:
-        if always.statement.statements[0].true_statement.statements[0].right.var==sig:
-            for states in always.statement.statements:
-                var = states.true_statement.statements[0].left.var
-                mux_output.append(var)
-                while (isinstance(states.false_statement, ast.IfStatement)):
-                    states = states.false_statement
-                    var = states.true_statement.statements[0].right.var
-                    mux_output.append(var)
-                var = states.false_statement.statements[0].right.var
-                mux_output.append(var)
-            break
-
-    return mux_output, always
-
-'''
 def modify_ram_1w1r(inst, main_module_list, module_map, mux_always_list):
     for portarg in inst.portlist:
         if portarg.portname=="ce0":
@@ -141,7 +95,6 @@ def modify_ram_1w1r(inst, main_module_list, module_map, mux_always_list):
             sig_d = portarg.argname
         elif portarg.portname=="q0":
             sig_q = portarg.argname
-    
 
     # 1. ram belongs to a single module
     #   a. we -> clk1, ce -> clk1: do not change
@@ -242,7 +195,48 @@ def modify_ram_1w1r(inst, main_module_list, module_map, mux_always_list):
 
             return [we_mux_always, address_mux_always, d_mux_always, q_mux_always]
 '''
-                    
+ 
+def find_mux_in(sig, mux_always_list):
+    mux_input = []
+    for always in mux_always_list:
+        if always.statement.statements[0].true_statement.statements[0].left.var==sig:
+            for states in always.statement.statements:
+                var = states.true_statement.statements[0].right.var
+                if isinstance(var, ast.IntConst) and (var.value!="'bx" or var.value!="1'b0"):
+                    continue
+                mux_input.append(var)
+                while (isinstance(states.false_statement, ast.IfStatement)):
+                    states = states.false_statement
+                    var = states.true_statement.statements[0].right.var
+                    if isinstance(var, ast.IntConst) and (var.value!="'bx" or var.value!="1'b0"):
+                        continue
+                    mux_input.append(var)
+                var = states.false_statement.statements[0].right.var
+                if isinstance(var, ast.IntConst) and (var.value!="'bx" or var.value!="1'b0"):
+                    continue
+                mux_input.append(var)
+            break
+
+    return mux_input, always
+
+def find_mux_out(sig, mux_always_list):
+    mux_output = []
+    for always in mux_always_list:
+        if always.statement.statements[0].true_statement.statements[0].right.var==sig:
+            for states in always.statement.statements:
+                var = states.true_statement.statements[0].left.var
+                mux_output.append(var)
+                while (isinstance(states.false_statement, ast.IfStatement)):
+                    states = states.false_statement
+                    var = states.true_statement.statements[0].right.var
+                    mux_output.append(var)
+                var = states.false_statement.statements[0].right.var
+                mux_output.append(var)
+            break
+
+    return mux_output, always
+
+                   
 def extrace_always_naming_rule(always, naming_rules, clk_domain, direction):
     # find not needed true_statement of a statement, using the false_statement to replace 
     #  the statement
@@ -575,20 +569,4 @@ def modify_bram(inst, main_module_list, module_map, mux_always_list):
         print(i.statement.statements[0].true_statement.statements[0].left.var.name)
     return add_ram_inst, add_ram_mux, rm_ram_mux
     
-#
-## for these three function, it is not sure.
-## We might need DMUX to sync all these signals if they are from 
-## a clock domain being different from phy clock.
-#
-## how to do that
-#
-#def find_alwpos_conn
-#
-#def find_alwcmp_conn
-#
-#def find_assign_conn
 
-#def verilog_parser(file_path, module_map):
-#    # clk domain map of main modules from crg_gen
-#    modules_map
-read_file("aaa.v", {"top_nondf_kernel_2mm": "clk_ndf", "top_kernel3_x1": "clk_df1", "top_kernel3_x0": "clkdf2"})
