@@ -1,6 +1,5 @@
 from pyverilog.vparser.parser import parse as rtl_parse
 from pyverilog.vparser.parser import VerilogParser
-from cdc_modify import *
 import pyverilog.vparser.ast as ast
 import os
 import copy
@@ -82,11 +81,12 @@ def read_file(module_name, module_map, root_path):
     case_always_list = []       # always block equal to an case based mux
     mux_always_list = []        # always block equal to an if based mux
     assign_always_list = []     # always block equal to an assign
+    print(file_path)
     top_module_ast, directives = rtl_parse([file_path])
     all_instances = DFS(top_module_ast, lambda node : isinstance(node, ast.Instance))
     all_instanceslist = DFS(top_module_ast, lambda node : isinstance(node, ast.InstanceList))
     all_always = DFS(top_module_ast, lambda node : isinstance(node, ast.Always))
-    all_assign= DFS(top_module_ast, lambda node : isinstance(node, ast.Assign))
+    all_assign = DFS(top_module_ast, lambda node : isinstance(node, ast.Assign))
     for inst in all_instances:
         if "s_axi" in inst.module or "m_axi" in inst.module:
             axi_module_list.append(inst)
@@ -94,8 +94,6 @@ def read_file(module_name, module_map, root_path):
             cg_module_list.append(inst)
         elif inst.module in list(module_map.keys()):
             main_module_list.append(inst)
-        elif "start" in inst.module and is_fifo_inst(inst):
-            start_fifo_module_list.append(inst)
         elif is_fifo_inst(inst):
             fifo_module_list.append(inst)
         elif is_ram(inst):
@@ -114,10 +112,10 @@ def read_file(module_name, module_map, root_path):
             else:
                 mux_always_list.append(always)
 
-    return_list = [axi_module_list,
+    return_list = [top_module_ast,
+                   axi_module_list,
                    cg_module_list, 
                    main_module_list, 
-                   start_fifo_module_list,
                    fifo_module_list,  
                    ram_module_list, 
                    other_module_list, 
@@ -135,3 +133,4 @@ def read_file(module_name, module_map, root_path):
         
     
     return return_list
+

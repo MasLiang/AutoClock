@@ -1,5 +1,9 @@
 from pyverilog.vparser.parser import parse as rtl_parse
-#from cdc.src.template.async_dpram import *
+from pyverilog.ast_code_generator.codegen import ASTCodeGenerator
+import sys
+sys.path.append("../../")
+from cdc.src.template.async_dpram import *
+from cdc.src.template.async_fifo import *
 from parser import *
 import pyverilog.vparser.ast as ast
 import os
@@ -9,10 +13,11 @@ import re
    
 def modify_only_module_clk(inst, clk_domain):
     for portarg in inst.portlist:
-        if portarg.portname=="ap_clk":
-            portarg.argname = clk_domain
-        elif portarg.portname=="ap_rst":
-            portarg.argname = "rst_"+clk_domain
+        if isinstance(portarg.argname, ast.Identifier):
+            if portarg.argname.name=="ap_clk":
+                portarg.argname.name = clk_domain
+            elif portarg.argname.name=="ap_rst_n_inv":
+                portarg.argname.name = "rst_"+clk_domain
   
     
 def modify_fifo_clk(inst, main_module_list, module_map):
@@ -25,35 +30,39 @@ def modify_fifo_clk(inst, main_module_list, module_map):
     
     for module in main_module_list:
         for portarg in module.portlist:
-            if portarg.argname==sig_wr:
-                wr_clk = module_map[module.name]
-            elif portarg.argname==sig_rd:
-                rd_clk = module_map[module_name]
+            if isinstance(portarg.argname, ast.Identifier):
+                if portarg.argname==sig_wr:
+                    wr_clk = module_map[module.module]
+                elif portarg.argname==sig_rd:
+                    rd_clk = module_map[module.module]
 
     if wr_clk==rd_clk:
         modify_only_module_clk(inst, wr_clk)
     else:
-        fifo_name = inst.name
-        match = re.search(r'(\w+)_w(\d+)_d(\d+)_A(\w+)', fifo_name)
+        fifo_name = inst.module
+        match = re.search(r'(\w+)_w(\d+)_d(\d+)_A(\w*)', fifo_name)
         if match:
             fifo_width = match.group(1)
             fifo_depth = match.group(2)
             async_fifo_factor = ["block", fifo_depth, fifo_depth, fifo_width, fifo_width]
         else:
-            match = re.search(r'(\w+)_w(\d+)_d(\d+)_S(\w+)', fifo_name)
+            match = re.search(r'(\w+)_w(\d+)_d(\d+)_S(\w*)', fifo_name)
             fifo_width = match.group(1)
             fifo_depth = match.group(2)
             async_fifo_factor = ["distributed", fifo_depth, fifo_depth, fifo_width, fifo_width]
         gen_async_fifo_file(fifo_name, async_fifo_factor)
         for portarg in inst.portlist:
             if portarg.portname=="clk":
-                portarg.argname = wr_clk
+                portarg.argname.name = wr_clk
                 portarg.portname = "if_wr_clk"
-            temp_portarg = portarg
-            temp_portarg.argname = rd_clk
-            temp_portarg.portname = "if_rd_clk"
-            inst.portlist.append(temp_portarg)
-            break
+                temp_portarg = copy.deepcopy(portarg)
+                temp_portarg.argname.name = rd_clk
+                temp_portarg.portname = "if_rd_clk"
+                port_list = list(inst.portlist)
+                port_list.append(temp_portarg)
+                inst.portlist = tuple(port_list)
+            elif portarg.portname=="reset":
+                portarg.argname.name = "rst_"+wr_clk
 
 '''
 def modify_ram_only_clk_rst(inst, ce_clk):
@@ -321,7 +330,7 @@ def connect_to_module(sig, main_module_list):
     return False,'',''
         
 
-def modify_bram(inst, main_module_list, module_map, mux_always_list):
+def modify_bram_clk(inst, main_module_list, module_map, mux_always_list):
     # extrace ports
     sig_ce0 = ''
     sig_we0 = ''
@@ -398,6 +407,12 @@ def modify_bram(inst, main_module_list, module_map, mux_always_list):
             port[7] = [port[7][0].name]
             port[0] = port[0].name+"_"+port[8]
             new_port_list_ce.append(port)
+            ce_mux_always = port[6]
+            rm_ram_mux.add(ce_mux_always)
+            new_ce_mux_always =  copy.deepcopy(ce_mux_always)
+            new_ce_mux_always.statement.statements[0].true_statement.statements[0].left.var.name = port[0]
+            new_ce_mux_always.statement.statements[0].false_statement.statements[0].left.var.name = port[0]
+            port[6] = new_ce_mux_always
             continue
         # find modules connected to the mux input
         clk_dic = {}
@@ -413,6 +428,8 @@ def modify_bram(inst, main_module_list, module_map, mux_always_list):
         if len(list(clk_dic.keys()))==1:
             port[0] = port[0].name+"_"+list(clk_dic.keys())[0]
             new_port_list_ce.append(port)
+            ce_mux_always = port[6]
+            rm_ram_mux.add(ce_mux_always)
             continue
         # extract the ce always mux
         ce_mux_always = port[6]
@@ -491,7 +508,9 @@ def modify_bram(inst, main_module_list, module_map, mux_always_list):
                             sig_match = re.search(naming_rule, sig_mux_in[0].name)
                             if sig_match:
                                 temp_sig_type = "mux"
-                                temp_sig_always = sig_mux_always
+                                temp_sig_always = copy.deepcopy(sig_mux_always)
+                                temp_sig_always.statement.statements[0].true_statement.statements[0].left.var.name  += "_"+clk_domain
+                                temp_sig_always.statement.statements[0].false_statement.statements[0].left.var.name += "_"+clk_domain
                                 temp_sig_mux_in = sig_mux_in[0].name
                                 port[sig_idx] = port[sig_idx].name+"_"+clk_domain
                                 break
@@ -535,24 +554,25 @@ def modify_bram(inst, main_module_list, module_map, mux_always_list):
     # TODO can only deal with 1wNr condition.
     factors = [data_width, address_width, address_range]    
     add_ram_inst = []
+    inst_idx = 0
     for port0 in w_port_list:
         for port1 in r_port_list + wr_port_list:
             port_dic = {}
             port_dic["w"] = port0[0:5]+[port0[-1]]+[port0[-1]+"_rst"]
             port_dic["r"] = port1[0:5]+[port1[-1]]+[port1[-1]+"_rst"]
-            gen_async_bram_inst(inst.module+"_"+port0[-1]+"_"+port1[-1], 
-                                inst.name+"_"+port0[-1]+"_"+port1[-1],  
+            gen_async_bram_inst(inst.module+"_"+port0[-1]+"_"+port1[-1]+"_"+str(inst_idx), 
+                                inst.name+"_"+port0[-1]+"_"+port1[-1]+"_"+str(inst_idx),  
                                 port_dic, factors)
-            new_ram_ast, _ = rtl_parse(["./"+inst.module+"_"+port0[-1]+"_"+port1[-1]+"_inst.v"])
-            os.system("rm ./"+inst.module+"_"+port0[-1]+"_"+port1[-1]+"_inst.v")
+            new_ram_ast, _ = rtl_parse(["./"+inst.module+"_"+port0[-1]+"_"+port1[-1]+"_"+str(inst_idx)+"_inst.v"])
+            os.system("rm ./"+inst.module+"_"+port0[-1]+"_"+port1[-1]+"_"+str(inst_idx)+"_inst.v")
             new_instances = DFS(new_ram_ast, lambda node : isinstance(node, ast.Instance))
             for new_inst in new_instances:
                 break # only one inst in this file
             add_ram_inst.append(new_inst)
+            inst_idx += 1
 
     add_ram_mux = []
     for port in w_port_list+r_port_list+wr_port_list:
-        print(port)
         if port[6]!=[]:
             add_ram_mux.append(port[6])
         if port[9]!=[]:
@@ -560,13 +580,84 @@ def modify_bram(inst, main_module_list, module_map, mux_always_list):
         if port[12]!=[]:
             add_ram_mux.append(port[12])
         
-    for i in add_ram_mux:
-        print(i)
-    for i in add_ram_inst:
-        print(i)
-    for i in rm_ram_mux:
-        print(i)
-        print(i.statement.statements[0].true_statement.statements[0].left.var.name)
-    return add_ram_inst, add_ram_mux, rm_ram_mux
+    return add_ram_inst, add_ram_mux, list(rm_ram_mux)
     
+def axi_module_clk_bound(axi_module_list, clk_domain):
+    for axi_inst in axi_module_list:
+        modify_only_module_clk(axi_inst, clk_domain)
 
+def main_module_clk_bound(main_module_list, module_map):
+    for main_inst in main_module_list:
+        modify_only_module_clk(main_inst, module_map[main_inst.module])
+
+def fifo_module_clk_bound(fifo_module_list, main_module_list, module_map):
+    for fifo_inst in fifo_module_list:
+        modify_fifo_clk(fifo_inst, main_module_list, module_map)
+
+def ram_module_clk_bound(top_module_ast, ram_module_list, main_module_list, module_map, mux_always_list):
+    module_defs = DFS(top_module_ast, lambda node: isinstance(node, ast.ModuleDef))
+    for module_def in module_defs:
+        break
+    item_list = list(module_def.items)
+
+    add_ram_inst_all = []
+    add_ram_mux_all = []
+    rm_ram_mux_all = []
+    rm_item_all = []
+    rm_reg_def_all = []
+    for ram_inst in ram_module_list:
+        add_ram_inst, add_ram_mux, rm_ram_mux = modify_bram_clk(ram_inst, main_module_list, module_map, mux_always_list)
+        add_ram_inst_all += add_ram_inst
+        add_ram_mux_all += add_ram_mux
+        rm_ram_mux_all += rm_ram_mux
+    
+    for rm_item in rm_ram_mux_all:
+        var = rm_item.statement.statements[0].true_statement.statements[0].left.var
+        rm_reg_def_all.append(var)
+        item_list.remove(rm_item)
+
+    for item in item_list:
+        if isinstance(item, ast.InstanceList):
+            for rm_item in ram_module_list:
+                if item.instances[0]==rm_item:
+                    rm_item_all.append(item)
+                    break
+
+    for item in item_list:
+        if isinstance(item, ast.Decl):
+            if isinstance(item.list[0], ast.Reg):
+                for rm_item in rm_reg_def_all:
+                    if item.list[0].name==rm_item.name:
+                        rm_item_all.append(item)
+                        break
+    
+    for rm_item in rm_item_all:
+        item_list.remove(rm_item)
+            
+    for add_instance in add_ram_inst:
+        add_instance_list = ast.InstanceList(module=add_instance.module, parameterlist = add_instance.parameterlist, instances =[add_instance])
+        item_list.append(add_instance_list)
+    item_list += add_ram_mux
+    module_def.items = tuple(item_list)
+    
+def org_rst_rm(pose_always_list):
+    for always in pose_always_list:
+        if isinstance(always.statement.statements[0], ast.NonblockingSubstitution):
+            if "ap_rst" in always.statement.statements[0].left.var.name:
+                pose_always_list.remove(always)
+        
+
+def cdc_insert(module_name, module_map, root_path):
+    top_module_ast, axi_module_list, cg_module_list, main_module_list, fifo_module_list, ram_module_list, other_module_list, pose_always_list, case_always_list, assign_always_list, mux_always_list = read_file(module_name, module_map, root_path)
+    ram_module_clk_bound(top_module_ast, ram_module_list, main_module_list, module_map, mux_always_list)
+    axi_module_clk_bound(axi_module_list, module_map[module_name])
+    main_module_clk_bound(main_module_list, module_map)
+    fifo_module_clk_bound(fifo_module_list, main_module_list, module_map)
+    org_rst_rm(pose_always_list)
+    rtl_generator = ASTCodeGenerator()
+    new_rtl = rtl_generator.visit(top_module_ast)
+    with open(module_name+".v", 'w') as f:
+        f.write(new_rtl) 
+ 
+cdc_insert("top", {"top": "clk_phy", "top_nondf_kernel_2mm": "clk1", "top_kernel3_x1": "clk2", "top_kernel3_x0": "clk3"}, "./verilog/")
+#cdc_insert("rwkv_top", {"rwkv_top": "clk_phy", "rwkv_top_read_all115": "clk1", "rwkv_top_layer_common_s": "clk2", "rwkv_top_write_all": "clk3"}, "../../../rwkv_src/verilog/")

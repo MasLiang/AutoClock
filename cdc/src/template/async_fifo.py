@@ -23,7 +23,7 @@ def gen_async_fifo_file(module_name, factors):
     lst_port.append("    input                      if_wr_clk,")
     lst_port.append("    input                      if_write,")
     lst_port.append("    input                      if_write_ce,")
-    lst_port.append("    input                      rst"),                     
+    lst_port.append("    input                      reset"),                     
     lst_port.append(" );")
     lst_port.append("\n")
 
@@ -138,8 +138,5 @@ def gen_async_fifo_inst(module_name, factors):
 
     return [lst_wire, lst_inst]
 
-factor = ["auto", 16, 16, 16, 16]
-bbb = gen_async_fifo_inst("aaa", factor)
-for i in bbb:
-    for j in i:
-        print(j)
+#factor = ["auto", 16, 16, 16, 16]
+#bbb = gen_async_fifo_inst("aaa", factor)

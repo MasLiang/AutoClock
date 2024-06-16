@@ -38,7 +38,7 @@ def determain_cgen(file_path, undf_flg):
                 return "ap_idle"
         return "" 
     
-def insert_cg(inst_name, root_path, undf_flg):
+def cg_insert_single_module(inst_name, root_path, undf_flg):
     file_path = root_path+"/"+inst_name+".v"
     cgen = determain_cgen(file_path, undf_flg)
 
@@ -86,13 +86,13 @@ def insert_cg(inst_name, root_path, undf_flg):
         for i in new_rtl:
             f.write(i)
 
-def cg_modify(module_list, root_path):
+def cg_insert(module_list, root_path):
     for inst in module_list:
         # Why not this file?
         if not os.path.exists(root_path+"/"+inst.module+".v"):
             continue
         # read and parse this file
-        _,cg_module_list, main_module_list, _, _, _, other_module_list,_, case_always_list, _, _ = read_file(inst.module, {}, root_path)
+        _, _, cg_module_list, main_module_list, _, _, other_module_list, _, case_always_list, _, _ = read_file(inst.module, {}, root_path)
         # if there is a clock gate
         if len(cg_module_list)!=0:
             continue
@@ -104,9 +104,8 @@ def cg_modify(module_list, root_path):
         undf_flg = 0
         if len(case_always_list)==0:
             undf_flg = 1
-        insert_cg(inst.module, root_path, undf_flg)
+        cg_insert_single_module(inst.module, root_path, undf_flg)
         
-#insert_cg("top", "./verilog")
 root_path = "./verilog"
-_, cg_module_list, main_module_list, _, _, _, other_module_list, _, _, _, _ = read_file("top", {}, root_path)
-cg_modify(main_module_list+other_module_list, root_path)
+_, _, cg_module_list, main_module_list, _, _, other_module_list, _, _, _, _ = read_file("top", {}, root_path)
+cg_insert(main_module_list+other_module_list, root_path)
