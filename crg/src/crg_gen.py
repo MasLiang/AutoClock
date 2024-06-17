@@ -1,4 +1,3 @@
-import clk_domain_check
 from template.mmcme4_adv import *
 from template.plle4_adv import *
 from template.bufgmux import *
@@ -6,7 +5,7 @@ from template.bufgce_div import *
 from template.rst_sync import *
 from template.bufgce import *
 from clk_domain_analyze import clk_resource_cal
-from clk_domain_check import extract_clk_domains
+from clk_domain_extract import extract_clk_domains
 
 def crg_gen(file):
     modules, domains, domains_sel_if = extract_clk_domains(file)
@@ -28,6 +27,8 @@ def crg_gen(file):
     lst_bufgce_inst = []
     lst_bufi_wire = []
     lst_bufi_inst = []
+    lst_crg_inst = []
+    lst_crg_wire = []
 
     top_module = list(modules.keys())[0]
     lst_clk = list(domains.keys())
@@ -165,17 +166,28 @@ def crg_gen(file):
     
     # gen port
     lst_port.append(f'''module {top_module}_crg{'{'}''')
+    lst_crg_inst.append(f'''{top_module}_crg u_crg(''')
     for clk in lst_clk[1:]:
         if clk in domains_sel_if :
             lst_port.append("   input       "+clk+"_"+domains_sel_if[clk][0]+",")
+            lst_crg_inst.append(f'''{'    .'+clk+'_'+domains_sel_if[clk][0]:<40}({clk+'_'+domains_sel_if[clk][0]}),''')
+            lst_crg_wire.append("wire    "+clk+'_'+domains_sel_if[clk][0]+";")
             lst_assign.append(f'''{'assign    mux_'+clk+'_sel':<40}=    {clk}_{domains_sel_if[clk][0]};''')
         lst_port.append("   input       "+clk+"_en,")
+        lst_crg_inst.append(f'''{'    .'+clk+'_en':<40}({clk+'_en'}),''')
+        lst_crg_wire.append("wire    "+clk+"_en;")
         lst_assign.append(f'''{'assign    bufgce_'+clk+'_gce':<40}=    {clk}_en;''')
         lst_port.append("   output      "+clk+",")
+        lst_crg_inst.append(f'''{'   .'+clk:<40}({clk}),''')
+        lst_crg_wire.append("wire    "+clk+";")
         lst_port.append("   output      rst_"+clk+",")
+        lst_crg_inst.append(f'''{'   .rst_'+clk:<40}({'rst_'+clk}),''')
+        lst_crg_wire.append("wire    rst_"+clk+";")
     lst_port.append("\n")
     lst_port.append("   input       "+src_clk+",")
+    lst_crg_inst.append(f'''{'   .'+src_clk:<40}(ap_clk),''')
     lst_port.append("   input       rst_n_sys")
+    lst_crg_inst.append(f'''{'   .rst_n_sys':<40}(ap_rst_n));''')
     lst_port.append(");")
     lst_port.append("\n")
     
@@ -246,6 +258,16 @@ def crg_gen(file):
             if(line!="\n"):
                 f.write("\n")
 
-        
+    with open(top_module+"_crg_inst.v", "w") as f:
+        f.write("module "+top_module+"_crg_inst(\n")
+        f.write("input clk,\n")
+        f.write("input rst_n);\n")
+        for line in lst_crg_wire:
+            f.write(line)
+            f.write("\n")        
+        for line in lst_crg_inst:
+            f.write(line)
+            f.write("\n")        
+        f.write("endmodule")
 
 crg_gen("example.c")

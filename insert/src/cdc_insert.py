@@ -622,9 +622,7 @@ def ram_module_clk_bound(top_module_ast, ram_module_list, main_module_list, modu
                 if item.instances[0]==rm_item:
                     rm_item_all.append(item)
                     break
-
-    for item in item_list:
-        if isinstance(item, ast.Decl):
+        elif isinstance(item, ast.Decl):
             if isinstance(item.list[0], ast.Reg):
                 for rm_item in rm_reg_def_all:
                     if item.list[0].name==rm_item.name:
@@ -646,7 +644,6 @@ def org_rst_rm(pose_always_list):
             if "ap_rst" in always.statement.statements[0].left.var.name:
                 pose_always_list.remove(always)
         
-
 def cdc_insert(module_name, module_map, root_path):
     top_module_ast, axi_module_list, cg_module_list, main_module_list, fifo_module_list, ram_module_list, other_module_list, pose_always_list, case_always_list, assign_always_list, mux_always_list = read_file(module_name, module_map, root_path)
     ram_module_clk_bound(top_module_ast, ram_module_list, main_module_list, module_map, mux_always_list)
@@ -658,6 +655,8 @@ def cdc_insert(module_name, module_map, root_path):
     new_rtl = rtl_generator.visit(top_module_ast)
     with open(module_name+".v", 'w') as f:
         f.write(new_rtl) 
+
+
  
 cdc_insert("top", {"top": "clk_phy", "top_nondf_kernel_2mm": "clk1", "top_kernel3_x1": "clk2", "top_kernel3_x0": "clk3"}, "./verilog/")
 #cdc_insert("rwkv_top", {"rwkv_top": "clk_phy", "rwkv_top_read_all115": "clk1", "rwkv_top_layer_common_s": "clk2", "rwkv_top_write_all": "clk3"}, "../../../rwkv_src/verilog/")
