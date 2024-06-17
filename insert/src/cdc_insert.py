@@ -328,9 +328,13 @@ def connect_to_module(sig, main_module_list):
                     return True, portarg, module
 
     return False,'',''
-        
+       
+def find_reg_wire_def(var_name, def_list):
+    for item in def_list:
+        if item.list[0].name==var_name:
+            return item
 
-def modify_bram_clk(inst, main_module_list, module_map, mux_always_list):
+def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_always_list):
     # extrace ports
     sig_ce0 = ''
     sig_we0 = ''
@@ -393,6 +397,8 @@ def modify_bram_clk(inst, main_module_list, module_map, mux_always_list):
     # divided to two ports
     new_port_list_ce = []
     rm_ram_mux = set()
+    rm_reg_def = []
+    add_reg_def = []
     for port in port_list:
         # connect to module directly, no need to change
         if port[5]=="bypass":
@@ -405,10 +411,17 @@ def modify_bram_clk(inst, main_module_list, module_map, mux_always_list):
             if flag:
                 port[8] = module_map[module.module]
             port[7] = [port[7][0].name]
+            decl_reg = find_reg_wire_def(port[0].name, DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))
             port[0] = port[0].name+"_"+port[8]
+            decl_reg_add = copy.deepcopy(decl_reg)
+            decl_reg_add.list[0].name = port[0]
+            add_reg_def.append(decl_reg_add)
             new_port_list_ce.append(port)
             ce_mux_always = port[6]
             rm_ram_mux.add(ce_mux_always)
+            decl_reg_name = ce_mux_always.statement.statements[0].true_statement.statements[0].left.var.name
+            decl_reg = find_reg_wire_def(decl_reg_name, DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))
+            rm_reg_def.append(decl_reg)
             new_ce_mux_always =  copy.deepcopy(ce_mux_always)
             new_ce_mux_always.statement.statements[0].true_statement.statements[0].left.var.name = port[0]
             new_ce_mux_always.statement.statements[0].false_statement.statements[0].left.var.name = port[0]
@@ -424,21 +437,25 @@ def modify_bram_clk(inst, main_module_list, module_map, mux_always_list):
                     clk_dic[clk_domain].append(ce_mux_input.name)
                 else:
                     clk_dic[clk_domain] = [ce_mux_input.name]
-        # all from the same clk domain, no need to change
+        # all from the same clk domain, no need to change 
+        # TODO need to verify
         if len(list(clk_dic.keys()))==1:
-            port[0] = port[0].name+"_"+list(clk_dic.keys())[0]
-            new_port_list_ce.append(port)
-            ce_mux_always = port[6]
-            rm_ram_mux.add(ce_mux_always)
             continue
         # extract the ce always mux
         ce_mux_always = port[6]
         rm_ram_mux.add(ce_mux_always)
+        decl_reg_name = ce_mux_always.statement.statements[0].true_statement.statements[0].left.var.name
+        decl_reg = find_reg_wire_def(decl_reg_name, DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))
+        rm_reg_def.append(decl_reg)
         for clk_domain in list(clk_dic.keys()):
             ce_signals = clk_dic[clk_domain]
             temp_ce_always = extrace_always_full_name(ce_mux_always, ce_signals, clk_domain)
             temp_port = port[0:6]+[temp_ce_always, ce_signals, clk_domain]
+            decl_reg = find_reg_wire_def(temp_port[0].name, DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))
             temp_port[0] = temp_port[0].name+"_"+clk_domain
+            decl_reg_add = copy.deepcopy(decl_reg)
+            decl_reg_add.list[0].name = temp_port[0]
+            add_reg_def.append(decl_reg_add)
             new_port_list_ce.append(temp_port)
 
     # analyze other ports
@@ -494,14 +511,24 @@ def modify_bram_clk(inst, main_module_list, module_map, mux_always_list):
                 if sig_idx==4:
                     sig_mux_out, sig_mux_always = find_mux_out(port[sig_idx], mux_always_list)
                     rm_ram_mux.add(sig_mux_always)
+                    decl_reg_name = sig_mux_always.statement.statements[0].true_statement.statements[0].left.var.name
+                    decl_reg = find_reg_wire_def(decl_reg_name, DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))
+                    rm_reg_def.append(decl_reg)
                     temp_sig_always, temp_sig_mux_in = extrace_always_naming_rule(sig_mux_always, naming_rules, clk_domain, "out")
                     port.append(temp_sig_type)
                     port.append(temp_sig_always)
                     port.append(temp_sig_mux_out)
+                    decl_reg = find_reg_wire_def(port[sig_idx].name, DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))
                     port[sig_idx]=port[sig_idx].name+"_"+clk_domain
+                    decl_reg_add = copy.deepcopy(decl_reg)
+                    decl_reg_add.list[0].name = port[sig_idx]
+                    add_reg_def.append(decl_reg_add)
                 else:
                     sig_mux_in, sig_mux_always = find_mux_in(port[sig_idx], mux_always_list)
                     rm_ram_mux.add(sig_mux_always)
+                    decl_reg_name = sig_mux_always.statement.statements[0].true_statement.statements[0].left.var.name
+                    decl_reg = find_reg_wire_def(decl_reg_name, DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))
+                    rm_reg_def.append(decl_reg)
                     # this is a data gate
                     if len(sig_mux_in)==1:
                         for naming_rule in naming_rules:
@@ -512,7 +539,11 @@ def modify_bram_clk(inst, main_module_list, module_map, mux_always_list):
                                 temp_sig_always.statement.statements[0].true_statement.statements[0].left.var.name  += "_"+clk_domain
                                 temp_sig_always.statement.statements[0].false_statement.statements[0].left.var.name += "_"+clk_domain
                                 temp_sig_mux_in = sig_mux_in[0].name
+                                decl_reg = find_reg_wire_def(port[sig_idx].name, DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))
                                 port[sig_idx] = port[sig_idx].name+"_"+clk_domain
+                                decl_reg_add = copy.deepcopy(decl_reg)
+                                decl_reg_add.list[0].name = port[sig_idx]
+                                add_reg_def.append(decl_reg_add)
                                 break
                         if not sig_match:
                             temp_sig_type = "none"
@@ -523,7 +554,11 @@ def modify_bram_clk(inst, main_module_list, module_map, mux_always_list):
                     else:
                         temp_sig_type = "mux"
                         temp_sig_always, temp_sig_mux_in = extrace_always_naming_rule(sig_mux_always, naming_rules, clk_domain, "in")
+                        decl_reg = find_reg_wire_def(port[sig_idx].name, DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))
                         port[sig_idx]=port[sig_idx].name+"_"+clk_domain
+                        decl_reg_add = copy.deepcopy(decl_reg)
+                        decl_reg_add.list[0].name = port[sig_idx]
+                        add_reg_def.append(decl_reg_add)
                     port.append(temp_sig_type)
                     port.append(temp_sig_always)
                     port.append(temp_sig_mux_in)
@@ -580,7 +615,7 @@ def modify_bram_clk(inst, main_module_list, module_map, mux_always_list):
         if port[12]!=[]:
             add_ram_mux.append(port[12])
         
-    return add_ram_inst, add_ram_mux, list(rm_ram_mux)
+    return add_ram_inst, add_ram_mux, list(rm_ram_mux), list(set(add_reg_def)), list(set(rm_reg_def))
     
 def axi_module_clk_bound(axi_module_list, clk_domain):
     for axi_inst in axi_module_list:
@@ -605,16 +640,14 @@ def ram_module_clk_bound(top_module_ast, ram_module_list, main_module_list, modu
     rm_ram_mux_all = []
     rm_item_all = []
     rm_reg_def_all = []
+    add_reg_def_all = []
     for ram_inst in ram_module_list:
-        add_ram_inst, add_ram_mux, rm_ram_mux = modify_bram_clk(ram_inst, main_module_list, module_map, mux_always_list)
+        add_ram_inst, add_ram_mux, rm_ram_mux, add_reg_def, rm_reg_def = modify_bram_clk(top_module_ast, ram_inst, main_module_list, module_map, mux_always_list)
         add_ram_inst_all += add_ram_inst
         add_ram_mux_all += add_ram_mux
         rm_ram_mux_all += rm_ram_mux
-    
-    for rm_item in rm_ram_mux_all:
-        var = rm_item.statement.statements[0].true_statement.statements[0].left.var
-        rm_reg_def_all.append(var)
-        item_list.remove(rm_item)
+        rm_reg_def_all += rm_reg_def
+        add_reg_def_all += add_reg_def
 
     for item in item_list:
         if isinstance(item, ast.InstanceList):
@@ -622,20 +655,33 @@ def ram_module_clk_bound(top_module_ast, ram_module_list, main_module_list, modu
                 if item.instances[0]==rm_item:
                     rm_item_all.append(item)
                     break
-        elif isinstance(item, ast.Decl):
-            if isinstance(item.list[0], ast.Reg):
-                for rm_item in rm_reg_def_all:
-                    if item.list[0].name==rm_item.name:
-                        rm_item_all.append(item)
-                        break
+
+    for rm_reg in rm_reg_def_all:
+        item_list.remove(rm_reg)
+        
     
     for rm_item in rm_item_all:
         item_list.remove(rm_item)
             
-    for add_instance in add_ram_inst:
+    for add_instance in add_ram_inst_all:
         add_instance_list = ast.InstanceList(module=add_instance.module, parameterlist = add_instance.parameterlist, instances =[add_instance])
         item_list.append(add_instance_list)
-    item_list += add_ram_mux
+
+    # when adding mux, those new signals need to be added
+    item_list += add_ram_mux_all
+
+    start_reg_def = 0
+    for item_idx in range(len(item_list)):
+        if start_reg_def==0:
+            if isinstance(item_list[item_idx], ast.Decl):
+                if isinstance(item_list[item_idx].list[0], ast.Reg):
+                    start_reg_def = 1
+        else:
+            if isinstance(item_list[item_idx], ast.Decl) or isinstance(item_list[item_idx], ast.Pragma):
+                continue
+            break
+    item_list = item_list[0:item_idx]+add_reg_def_all+item_list[item_idx:]
+
     module_def.items = tuple(item_list)
     
 def org_rst_rm(pose_always_list):
