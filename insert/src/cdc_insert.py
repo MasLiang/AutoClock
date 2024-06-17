@@ -638,7 +638,7 @@ def ram_module_clk_bound(top_module_ast, ram_module_list, main_module_list, modu
     add_ram_inst_all = []
     add_ram_mux_all = []
     rm_ram_mux_all = []
-    rm_item_all = []
+    rm_instlist_all = []
     rm_reg_def_all = []
     add_reg_def_all = []
     for ram_inst in ram_module_list:
@@ -653,14 +653,16 @@ def ram_module_clk_bound(top_module_ast, ram_module_list, main_module_list, modu
         if isinstance(item, ast.InstanceList):
             for rm_item in ram_module_list:
                 if item.instances[0]==rm_item:
-                    rm_item_all.append(item)
+                    rm_instlist_all.append(item)
                     break
 
+    for rm_mux in rm_ram_mux_all:
+        item_list.remove(rm_mux)
+        
     for rm_reg in rm_reg_def_all:
         item_list.remove(rm_reg)
-        
     
-    for rm_item in rm_item_all:
+    for rm_item in rm_instlist_all:
         item_list.remove(rm_item)
             
     for add_instance in add_ram_inst_all:
@@ -684,25 +686,42 @@ def ram_module_clk_bound(top_module_ast, ram_module_list, main_module_list, modu
 
     module_def.items = tuple(item_list)
     
-def org_rst_rm(pose_always_list):
-    for always in pose_always_list:
-        if isinstance(always.statement.statements[0], ast.NonblockingSubstitution):
-            if "ap_rst" in always.statement.statements[0].left.var.name:
-                pose_always_list.remove(always)
+def org_rst_rm(top_module_ast):
+    module_defs = DFS(top_module_ast, lambda node: isinstance(node, ast.ModuleDef))
+    for module_def in module_defs:
+        break
+    item_list = list(module_def.items)
+
+    rm_list = []
+    for item in item_list:
+        if isinstance(item, ast.Always):
+            if isinstance(item.statement.statements[0], ast.NonblockingSubstitution):
+                if "ap_rst" in item.statement.statements[0].left.var.name:
+                    rm_list.append(item)
+    for rm_always in rm_list:
+        item_list.remove(rm_always)
+    
+    module_def.items = tuple(item_list)
+
+def fsm_clk_bound(always_list, clk_domain):
+    for always in always_list:
+        if isinstance(always.statement.statements[0], ast.IfStatement):
+            var = always.statement.statements[0].true_statement.statements[0].left.var.name
+            if var=="ap_CS_fsm" or var=="ap_done_reg":
+                always.sens_list.list[0].sig.name = clk_domain
         
-def cdc_insert(module_name, module_map, root_path):
+def cdc_insert(module_name, module_map, fastest_clk, root_path):
     top_module_ast, axi_module_list, cg_module_list, main_module_list, fifo_module_list, ram_module_list, other_module_list, pose_always_list, case_always_list, assign_always_list, mux_always_list = read_file(module_name, module_map, root_path)
     ram_module_clk_bound(top_module_ast, ram_module_list, main_module_list, module_map, mux_always_list)
     axi_module_clk_bound(axi_module_list, module_map[module_name])
     main_module_clk_bound(main_module_list, module_map)
     fifo_module_clk_bound(fifo_module_list, main_module_list, module_map)
-    org_rst_rm(pose_always_list)
+    org_rst_rm(top_module_ast)
+    fsm_clk_bound(pose_always_list, fastest_clk)
     rtl_generator = ASTCodeGenerator()
     new_rtl = rtl_generator.visit(top_module_ast)
     with open(module_name+".v", 'w') as f:
         f.write(new_rtl) 
-
-
  
-cdc_insert("top", {"top": "clk_phy", "top_nondf_kernel_2mm": "clk1", "top_kernel3_x1": "clk2", "top_kernel3_x0": "clk3"}, "./verilog/")
+cdc_insert("top", {"top": "clk_phy", "top_nondf_kernel_2mm": "clk1", "top_kernel3_x1": "clk2", "top_kernel3_x0": "clk3"}, "clk3", "./verilog/")
 #cdc_insert("rwkv_top", {"rwkv_top": "clk_phy", "rwkv_top_read_all115": "clk1", "rwkv_top_layer_common_s": "clk2", "rwkv_top_write_all": "clk3"}, "../../../rwkv_src/verilog/")
