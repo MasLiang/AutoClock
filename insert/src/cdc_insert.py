@@ -42,13 +42,62 @@ def modify_fifo_clk(inst, main_module_list, module_map):
         fifo_name = inst.module
         match = re.search(r'(\w+)_w(\d+)_d(\d+)_A(\w*)', fifo_name)
         if match:
-            fifo_width = match.group(1)
-            fifo_depth = match.group(2)
+            fifo_width = int(match.group(2))
+            fifo_depth = int(match.group(3))
             async_fifo_factor = ["block", fifo_depth, fifo_depth, fifo_width, fifo_width]
         else:
             match = re.search(r'(\w+)_w(\d+)_d(\d+)_S(\w*)', fifo_name)
-            fifo_width = match.group(1)
-            fifo_depth = match.group(2)
+            fifo_width = int(match.group(2))
+            fifo_depth = int(match.group(3))
+            async_fifo_factor = ["distributed", fifo_depth, fifo_depth, fifo_width, fifo_width]
+        gen_async_fifo_file(fifo_name, async_fifo_factor)
+        for portarg in inst.portlist:
+            if portarg.portname=="clk":
+                portarg.argname.name = wr_clk
+                portarg.portname = "if_wr_clk"
+                temp_portarg = copy.deepcopy(portarg)
+                temp_portarg.argname.name = rd_clk
+                temp_portarg.portname = "if_rd_clk"
+                port_list = list(inst.portlist)
+                port_list.append(temp_portarg)
+                inst.portlist = tuple(port_list)
+            elif portarg.portname=="reset":
+                portarg.argname.name = "rst_"+wr_clk
+
+def modify_submodule_fifo_clk(inst, inst_list):
+    # this function is used to determain the clock domain of rd/wr port
+    for portarg in inst.portlist:
+        if portarg.portname=="if_write":
+            sig_wr = portarg.argname
+        elif portarg.portname=="if_read":
+            sig_rd = portarg.argname
+    
+    _, _, module = connect_to_module(sig_wr, inst_list)
+    if is_ddr_controller(module):
+        wr_clk = "axi_clk"
+    else:
+        wr_clk = "ap_clk"
+    
+    _, _, module = connect_to_module(sig_rd, inst_list)
+    if is_ddr_controller(module):
+        rd_clk = "axi_clk"
+    else:
+        rd_clk = "ap_clk"
+
+    if wr_clk==rd_clk:
+
+        modify_only_module_clk(inst, wr_clk)
+    else:
+        fifo_name = inst.module
+        match = re.search(r'(\w+)_w(\d+)_d(\d+)_A(\w*)', fifo_name)
+        if match:
+            fifo_width = int(match.group(2))
+            fifo_depth = int(match.group(3))
+            async_fifo_factor = ["block", fifo_depth, fifo_depth, fifo_width, fifo_width]
+        else:
+            match = re.search(r'(\w+)_w(\d+)_d(\d+)_S(\w*)', fifo_name)
+            fifo_width = int(match.group(2))
+            fifo_depth = int(match.group(3))
             async_fifo_factor = ["distributed", fifo_depth, fifo_depth, fifo_width, fifo_width]
         gen_async_fifo_file(fifo_name, async_fifo_factor)
         for portarg in inst.portlist:
@@ -617,13 +666,102 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
         
     return add_ram_inst, add_ram_mux, list(rm_ram_mux), list(set(add_reg_def)), list(set(rm_reg_def))
     
+def main_axi_module_process(module_name, root_path):
+    file_path = root_path+"/"+module_name+".v"
+    top_module_ast, directives = rtl_parse([file_path])
+    module_defs = DFS(top_module_ast, lambda node: isinstance(node, ast.ModuleDef))
+    for module_def in module_defs:
+        break
+    item_list = list(module_def.items)
+    
+    for item_idx in range(len(item_list)):
+        if isinstance(item_list[item_idx], ast.Decl):
+            if isinstance(item_list[item_idx].list[0], ast.Input):
+                if item_list[item_idx].list[0].name=="ap_clk":
+                    break
+    
+    temp_clk = copy.deepcopy(item_list[item_idx])
+    temp_clk.list[0].name = "axi_clk"
+    item_list = item_list[0:item_idx]+[temp_clk]+item_list[item_idx:]
+    temp_rst = copy.deepcopy(item_list[item_idx])
+    temp_rst.list[0].name = "rst_axi"
+    item_list = item_list[0:item_idx]+[temp_rst]+item_list[item_idx:]
+
+    port_list = list(module_def.portlist.ports)
+
+    for portarg_idx in range(len(port_list)):
+        if port_list[portarg_idx].name=="ap_clk":
+            break
+    
+    temp_clk_port = copy.deepcopy(port_list[portarg_idx])
+    temp_clk_port.name = "axi_clk"
+    port_list = port_list[0:portarg_idx]+[temp_clk_port]+port_list[portarg_idx:]
+    temp_rst_port = copy.deepcopy(port_list[portarg_idx])
+    temp_rst_port.name = "rst_axi"
+    port_list = port_list[0:portarg_idx]+[temp_rst_port]+port_list[portarg_idx:]
+
+    module_def.portlist.ports = tuple(port_list)
+
+    all_instances = DFS(top_module_ast, lambda node :  isinstance(node, ast.Instance))
+    inst_list = [inst for inst in all_instances]
+
+    end_flg = 0
+    for inst in inst_list:
+        if is_ddr_controller(inst):
+            end_flg = 1
+            for portarg in inst.portlist:
+                if portarg.portname == "ap_clk":
+                    portarg.portname = "axi_clk"
+            break
+        elif is_main_axi_module(inst):
+            main_axi_module_clk_bound(inst, "ap_clk", root_path)
+
+    if end_flg==1:
+        for inst in inst_list:
+            if is_fifo_inst(inst):
+                modify_submodule_fifo_clk(inst, inst_list)
+
+    rtl_generator = ASTCodeGenerator()
+    new_rtl = rtl_generator.visit(top_module_ast)
+    with open(module_name+".v", "w") as f:
+        f.write(new_rtl)
+    
+
+def main_axi_module_clk_bound(inst, clk_domain, root_path):
+    for portarg in inst.portlist:
+        if isinstance(portarg.argname, ast.Identifier):
+            if portarg.argname.name=="ap_clk":
+                portarg.argname.name = clk_domain
+                temp_portarg = copy.deepcopy(portarg)
+                temp_portarg.argname.name = "ap_clk"
+                temp_portarg.portname = "axi_clk"
+                port_list = list(inst.portlist)
+                port_list.append(temp_portarg)
+                inst.portlist = tuple(port_list)
+            elif portarg.argname.name=="ap_rst_n_inv":
+                portarg.argname.name = "rst_"+clk_domain
+                temp_portarg = copy.deepcopy(portarg)
+                temp_portarg.argname.name = "ap_rst_n_inv"
+                temp_portarg.portname = "rst_axi"
+                port_list = list(inst.portlist)
+                port_list.append(temp_portarg)
+                inst.portlist = tuple(port_list)
+
+    main_axi_module_process(inst.module, root_path)
+ 
 def axi_module_clk_bound(axi_module_list, clk_domain):
     for axi_inst in axi_module_list:
         modify_only_module_clk(axi_inst, clk_domain)
 
-def main_module_clk_bound(main_module_list, module_map):
+def main_module_clk_bound(main_module_list, module_map, root_path):
     for main_inst in main_module_list:
-        modify_only_module_clk(main_inst, module_map[main_inst.module])
+        if is_ddr_controller(main_inst):
+            # TODO, assert that user's config is wrong. It should be in ap_clk domain
+            continue
+        if is_main_axi_module(main_inst):
+            main_axi_module_clk_bound(main_inst, module_map[main_inst.module], root_path)
+        else:
+            modify_only_module_clk(main_inst, module_map[main_inst.module])
 
 def fifo_module_clk_bound(fifo_module_list, main_module_list, module_map):
     for fifo_inst in fifo_module_list:
@@ -713,10 +851,10 @@ def fsm_clk_bound(always_list, clk_domain):
 def cdc_insert(module_name, module_map, fastest_clk, root_path):
     top_module_ast, axi_module_list, cg_module_list, main_module_list, fifo_module_list, ram_module_list, other_module_list, pose_always_list, case_always_list, assign_always_list, mux_always_list = read_file(module_name, module_map, root_path)
     ram_module_clk_bound(top_module_ast, ram_module_list, main_module_list, module_map, mux_always_list)
-    axi_module_clk_bound(axi_module_list, module_map[module_name])
-    main_module_clk_bound(main_module_list, module_map)
+    #axi_module_clk_bound(axi_module_list, module_map[module_name])
+    main_module_clk_bound(main_module_list, module_map, root_path)
     fifo_module_clk_bound(fifo_module_list, main_module_list, module_map)
-    org_rst_rm(top_module_ast)
+    #org_rst_rm(top_module_ast) # reserve for axi
     fsm_clk_bound(pose_always_list, fastest_clk)
     rtl_generator = ASTCodeGenerator()
     new_rtl = rtl_generator.visit(top_module_ast)

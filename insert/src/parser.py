@@ -56,6 +56,41 @@ def is_ram_1r2w_inst(inst):
 def is_ram(inst):
     return is_ram_1wr_inst(inst) or is_ram_1wr2r_inst(inst) or is_ram_1r2w_inst(inst)
 
+def is_main_axi_module(main_inst):
+    for portarg in main_inst.portlist:
+        if "axi" in portarg.portname:
+            return True
+    return False
+
+def is_ddr_controller(inst):
+    axi_if_flg = 0
+    fifo_if_flg = 0
+    for portarg in inst.portlist:
+        if not(("axi" in portarg.portname) or 
+               ("ap_" in portarg.portname) or
+               ("_din" in portarg.portname) or
+               ("_full_n" in portarg.portname) or
+               ("_write" in portarg.portname) or
+               ("_dout" in portarg.portname) or
+               ("_empty_n" in portarg.portname) or
+               ("_read" in portarg.portname)):
+            return False
+        elif "axi" in portarg.portname:
+            axi_if_flg = 1
+        elif (("ap_" in portarg.portname) or
+              ("_din" in portarg.portname) or
+              ("_full_n" in portarg.portname) or
+              ("_write" in portarg.portname) or
+              ("_dout" in portarg.portname) or
+              ("_empty_n" in portarg.portname) or
+              ("_read" in portarg.portname)):
+            fifo_if_flg = 1
+    if axi_if_flg==1 and fifo_if_flg==1:
+        return True
+    else:
+        return False
+    
+
 def DFS(node, filter_func):
   if filter_func(node):
     try:

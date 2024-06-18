@@ -36,19 +36,13 @@ def crg_insert(module_name, root_path):
                 def_start_flg = 1
         elif not (isinstance(top_item_list[top_item_idx], ast.Decl) or isinstance(top_item_list[top_item_idx], ast.Pragma)):
             break
-    print(top_item_idx)
-    print(top_item_list[top_item_idx])
     # fuse wires
     top_item_list = top_item_list[0:top_item_idx]+crg_item_list[0:crg_item_idx]+top_item_list[top_item_idx:]
-    for iii in top_item_list:
-        print("1: ", iii)
     for top_item_idx in range(len(top_item_list)):
         if isinstance(top_item_list[top_item_idx], ast.InstanceList):
             break
     # fuse instance
     top_item_list = top_item_list[0:top_item_idx]+crg_item_list[crg_item_idx:]+top_item_list[top_item_idx:]
-    for iii in top_item_list:
-        print("2: ", iii)
     top_module_def.items = tuple(top_item_list)
     
     # generate new rtl
