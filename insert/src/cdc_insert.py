@@ -4,6 +4,8 @@ import sys
 sys.path.append("../../")
 from cdc.src.template.async_dpram import *
 from cdc.src.template.async_fifo import *
+from cdc.src.template.async_pulse import *
+from cdc.src.template.async_level import *
 from parser import *
 import pyverilog.vparser.ast as ast
 import os
@@ -663,7 +665,7 @@ def ram_module_clk_bound(top_module_ast, ram_module_list, main_module_list, modu
         item_list.remove(rm_item)
             
     for add_instance in add_ram_inst_all:
-        add_instance_list = ast.InstanceList(module=add_instance.module, parameterlist = add_instance.parameterlist, instances =[add_instance])
+        add_instance_list = ast.InstanceList(add_instance.module, add_instance.parameterlist, [add_instance])
         item_list.append(add_instance_list)
 
     # when adding mux, those new signals need to be added
@@ -700,21 +702,135 @@ def org_rst_rm(top_module_ast):
     
     module_def.items = tuple(item_list)
 
-def fsm_clk_bound(always_list, clk_domain):
-    for always in always_list:
+def fsm_clk_bound(top_module_ast, assign_list, pose_always_list, mux_always_list, main_module_list, fastest_clk, module_map):
+    # sync ready and done signals 
+    rm_sig = []
+    rm_always = []
+    mdfy_always = []
+    rm_assign = []
+    rm_decl = []
+    add_async_inst = []
+    add_assign = []
+    add_decl = []
+    for assign in assign_list:
+        match_sync = re.search(r'ap_sync_(\w+)', assign.left.var.name)
+        if match_sync:
+            in_sig = match_sync.group(1)
+            _, _, module = connect_to_module(in_sig, main_module_list)
+            in_clk = module_map[module.module]
+            if in_clk==fastest_clk:
+                mdfy_always.append("ap_sync_reg_"+match_sync.group(1))
+                continue
+            out_sig = assign.left.var.name
+            out_clk = fastest_clk 
+            if "ap_done" in in_sig:
+                gen_async_level_inst("async_inst_"+in_sig, in_sig, in_clk, out_sig, out_clk)
+            else:
+                gen_async_pulse_inst("async_inst_"+in_sig, in_sig, in_clk, out_sig, out_clk)
+            async_inst_ast, _ = rtl_parse(["./async_inst_"+in_sig+"_inst.v"])
+            os.system("rm async_inst_"+in_sig+"_inst.v")
+            new_instance_list = DFS(async_inst_ast, lambda node : isinstance(node, ast.InstanceList))
+            for new_inst_list in new_instance_list:
+                break # only one inst in this file
+            add_async_inst.append(new_inst_list)
+            rm_sig.append("ap_sync_reg_"+match_sync.group(1))
+            decl_reg = find_reg_wire_def(rm_sig[-1], DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))
+            rm_decl.append(decl_reg)
+            rm_assign.append(assign)
+            continue
+ 
+    for always in pose_always_list:
         if isinstance(always.statement.statements[0], ast.IfStatement):
             var = always.statement.statements[0].true_statement.statements[0].left.var.name
-            if var=="ap_CS_fsm" or var=="ap_done_reg":
-                always.sens_list.list[0].sig.name = clk_domain
+            # bound to the fastest clock
+            if (var=="ap_CS_fsm") or (var=="ap_done_reg") or (var in mdfy_always):
+                always.sens_list.list[0].sig.name = fastest_clk
+                always.statement.statements[0].cond.left.name = "rst_"+fastest_clk
+            # remove those unused always for async
+            elif var in rm_sig:
+                rm_always.append(always)
+
+            # deal with start signals 
+            # 1. for FSM_states, sync them
+            # 2. pipe FSM_states with "round(fsm_clk/target_clk)+2"
+            # 3. add a flag to indicate if ready and end assert at the same time
+            elif "_ap_start_reg" in var:
+                eq_async = copy.deepcopy(always.statement.statements[0].false_statement.statements[0].cond)
+                eq_sync_assign = ast.Assign(ast.Lvalue(ast.Identifier(var+"_async_cond")), ast.Rvalue(eq_async))
+                add_assign.append(eq_sync_assign)
+                in_sig = var+"_async_cond"
+                in_clk = fastest_clk
+                out_sig = var+"_sync_cond"
+                _, _, module = connect_to_module(var.replace("_reg",""), main_module_list)
+                out_clk = module_map[module.module]
+                gen_async_level_inst("async_inst_"+in_sig, in_sig, in_clk, out_sig, out_clk)
+                async_inst_ast, _ = rtl_parse(["./async_inst_"+in_sig+"_inst.v"])
+                os.system("rm async_inst_"+in_sig+"_inst.v")
+                new_instance_list = DFS(async_inst_ast, lambda node : isinstance(node, ast.InstanceList))
+                for new_inst_list in new_instance_list:
+                    break # only one inst in this file
+                add_async_inst.append(new_inst_list)
+                decl_reg = find_reg_wire_def(in_sig, DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))
+                sync_decl_reg_start = ast.Decl([ast.Reg(out_sig)])
+                sync_decl_wire_start = ast.Decl([ast.Wire(in_sig)])
+                add_decl.append(sync_decl_reg_start)
+                add_decl.append(sync_decl_wire_start)
+                eq_sync = ast.And(ast.Lvalue(ast.Identifier(out_sig)), 
+                                  ast.Rvalue(ast.Eq(ast.Lvalue(ast.Identifier(var.replace("start_reg", "done"))), 
+                                                    ast.Rvalue(ast.Identifier("1'b0")))))
+                always.statement.statements[0].false_statement.statements[0].cond = eq_sync
+                always.sens_list.list[0].sig.name = out_clk
+                always.statement.statements[0].cond.left.name = "rst_"+out_clk
+                
+
+    for always in mux_always_list:
+        var = always.statement.statements[0].true_statement.statements[0].left.var.name
+        if "ap_continue" in var:
+            in_sig = var
+            _, _, module = connect_to_module(in_sig, main_module_list)
+            out_clk = module_map[module.module]
+            in_clk = fastest_clk
+            if in_clk==out_clk:
+                continue
+            out_sig = in_sig+"_sync"
+            gen_async_pulse_inst("async_inst_"+in_sig, in_sig, in_clk, out_sig, out_clk)
+            async_inst_ast, _ = rtl_parse(["./async_inst_"+in_sig+"_inst.v"])
+            os.system("rm async_inst_"+in_sig+"_inst.v")
+            new_instance_list = DFS(async_inst_ast, lambda node : isinstance(node, ast.InstanceList))
+            for new_inst_list in new_instance_list:
+                break # only one inst in this file
+            add_async_inst.append(new_inst_list)
+            sync_decl_wire_continue = ast.Decl([ast.Wire(out_sig)])
+            add_decl.append(sync_decl_wire_continue)
+            for portarg in module.portlist:
+                if isinstance(portarg.argname, ast.Identifier):
+                    if portarg.argname.name==in_sig:
+                        portarg.argname.name = out_sig
+ 
+
+    # update the ast
+    module_defs = DFS(top_module_ast, lambda node: isinstance(node, ast.ModuleDef))
+    for module_def in module_defs:
+        break
+    item_list = list(module_def.items)
+    for rm_item in rm_decl+rm_always+rm_assign:
+        item_list.remove(rm_item)
+    item_list += add_async_inst + add_assign
+    for item_idx in range(len(item_list)):
+        if isinstance(item_list[item_idx], ast.Decl):
+            if isinstance(item_list[item_idx].list[0], ast.Reg):
+                break
+    item_list = item_list[0:item_idx] + add_decl + item_list[item_idx:]
+    module_def.items = tuple(item_list)
         
 def cdc_insert(module_name, module_map, fastest_clk, root_path):
-    top_module_ast, axi_module_list, cg_module_list, main_module_list, fifo_module_list, ram_module_list, other_module_list, pose_always_list, case_always_list, assign_always_list, mux_always_list = read_file(module_name, module_map, root_path)
+    top_module_ast, axi_module_list, cg_module_list, main_module_list, fifo_module_list, ram_module_list, other_module_list, pose_always_list, case_always_list, assign_always_list, mux_always_list, assign_list = read_file(module_name, module_map, root_path)
     ram_module_clk_bound(top_module_ast, ram_module_list, main_module_list, module_map, mux_always_list)
-    #axi_module_clk_bound(axi_module_list, module_map[module_name])
+    #axi_module_clk_bound(axi_module_list, module_map[module_name]) #maintain the clock
     main_module_clk_bound(main_module_list, module_map, root_path)
     fifo_module_clk_bound(fifo_module_list, main_module_list, module_map)
     #org_rst_rm(top_module_ast) # reserve for axi
-    fsm_clk_bound(pose_always_list, fastest_clk)
+    fsm_clk_bound(top_module_ast, assign_list, pose_always_list, mux_always_list, main_module_list, fastest_clk, module_map)
     rtl_generator = ASTCodeGenerator()
     new_rtl = rtl_generator.visit(top_module_ast)
     with open(module_name+".v", 'w') as f:

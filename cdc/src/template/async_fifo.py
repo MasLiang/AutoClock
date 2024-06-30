@@ -2,10 +2,10 @@ import math
 
 def gen_async_fifo_file(module_name, factors):
 
-    memory_type = factor[0] # "auto", "block", "distributed", default "auto"
-    write_depth = factor[1]
-    rd_data_width = factor[2]
-    wr_data_width = factor[3]
+    memory_type = factors[0] # "auto", "block", "distributed", default "auto"
+    write_depth = factors[1]
+    rd_data_width = factors[2]
+    wr_data_width = factors[3]
     read_depth = write_depth*wr_data_width/rd_data_width
     
     lst_port = []

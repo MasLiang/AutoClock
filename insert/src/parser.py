@@ -147,6 +147,10 @@ def read_file(module_name, module_map, root_path):
             else:
                 mux_always_list.append(always)
 
+    assign_list = []
+    for assign in all_assign:
+        assign_list.append(assign)
+    
     return_list = [top_module_ast,
                    axi_module_list,
                    cg_module_list, 
@@ -157,7 +161,8 @@ def read_file(module_name, module_map, root_path):
                    pose_always_list, 
                    case_always_list, 
                    assign_always_list, 
-                   mux_always_list]
+                   mux_always_list,
+                   assign_list]
 
 #    for inst in ram_module_list:
 #        add_ram_inst, add_ram_mux, rm_ram_mux = modify_ram_common(inst, main_module_list, module_map, mux_always_list)

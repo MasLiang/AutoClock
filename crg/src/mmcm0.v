@@ -1,9 +1,6 @@
 module mmcm0_wrapper(
   output        clk_out0,
   output        clk_out1,
-  output        clk_out2,
-  output        clk_out3,
-  output        clk_out4,
   input         clk_in0
   input         reset,
   output        locked
@@ -12,9 +9,9 @@ module mmcm0_wrapper(
 
 wire           clk_out0_pri;
 wire           clk_out1_pri;
-wire           clk_out2_pri;
-wire           clk_out3_pri;
-wire           clk_out4_pri;
+wire           clk_out2_unused;
+wire           clk_out3_unused;
+wire           clk_out4_unused;
 wire           clk_out5_unused;
 wire           clk_out6_unused;
 wire           clkfbout_clk;
@@ -39,23 +36,23 @@ MMCME4_ADV #(
    .CLKFBOUT_MULT_F        (20.0),
    .CLKFBOUT_PHASE         (0.000),
    .CLKFBOUT_USE_FINE_PS   ("FALSE"),
-   .CLKOUT0_DIVIDE_F       (10),
+   .CLKOUT0_DIVIDE_F       (4),
    .CLKOUT0_PHASE          (0.000),
    .CLKOUT0_DUTY_CYCLE     (0.500),
    .CLKOUT0_USE_FINE_PS    ("FALSE"),
-   .CLKOUT1_DIVIDE         (2),
+   .CLKOUT1_DIVIDE         (5),
    .CLKOUT1_PHASE          (0.000),
    .CLKOUT1_DUTY_CYCLE     (0.500),
    .CLKOUT1_USE_FINE_PS    ("FALSE"),
-   .CLKOUT2_DIVIDE         (30),
+   .CLKOUT2_DIVIDE         (0),
    .CLKOUT2_PHASE          (0.000),
    .CLKOUT2_DUTY_CYCLE     (0.500),
    .CLKOUT2_USE_FINE_PS    ("FALSE"),
-   .CLKOUT3_DIVIDE         (4),
+   .CLKOUT3_DIVIDE         (0),
    .CLKOUT3_PHASE          (0.000),
    .CLKOUT3_DUTY_CYCLE     (0.500),
    .CLKOUT3_USE_FINE_PS    ("FALSE"),
-   .CLKOUT4_DIVIDE         (5),
+   .CLKOUT4_DIVIDE         (0),
    .CLKOUT4_PHASE          (0.000),
    .CLKOUT4_DUTY_CYCLE     (0.500),
    .CLKOUT4_USE_FINE_PS    ("FALSE"),
@@ -75,11 +72,11 @@ mmcme4_adv_inst(
    .CLKOUT0B               (clkout0b_unused),
    .CLKOUT1                (clk_out1_pri),
    .CLKOUT1B               (clkout1b_unused),
-   .CLKOUT2                (clk_out2_pri),
+   .CLKOUT2                (clk_out2_unused),
    .CLKOUT2B               (clkout2b_unused),
-   .CLKOUT3                (clk_out3_pri),
+   .CLKOUT3                (clk_out3_unused),
    .CLKOUT3B               (clkout3b_unused),
-   .CLKOUT4                (clk_out4_pri),
+   .CLKOUT4                (clk_out4_unused),
    .CLKOUT5                (clk_out5_unused),
    .CLKOUT6                (clk_out6_unused),
    .CLKFBIN                (clkfbout_clk),
@@ -112,12 +109,3 @@ BUFG clkout0_buf
 BUFG clkout1_buf
 (  .O   (clk_out1),
    .I   (clk_out1_pri));
-BUFG clkout2_buf
-(  .O   (clk_out2),
-   .I   (clk_out2_pri));
-BUFG clkout3_buf
-(  .O   (clk_out3),
-   .I   (clk_out3_pri));
-BUFG clkout4_buf
-(  .O   (clk_out4),
-   .I   (clk_out4_pri));
