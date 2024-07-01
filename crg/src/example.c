@@ -1,7 +1,7 @@
-#pragma HLS inputclk  clk_src 20
+#pragma HLS inputclk  clk_src 10
 void example(){
 	
-	#pragma HLS clkdomain clk1 4 5
+	#pragma HLS clkdomain clk1 2 5
 	#pragma HLS clksel clk1 sel 
 	module_1(int* in1, int* in2, int* out, int sel);
 	#pragma HLS clkdomain clk3 30

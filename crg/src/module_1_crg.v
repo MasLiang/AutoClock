@@ -14,12 +14,13 @@ module module_1_crg{
 
 wire    clk_src_ibuf;
 
-wire	mmcm0_clk_out0;
-wire	mmcm0_clk_out1;
-wire	mmcm0_clk_in0;
-wire	mmcm0_reset;
-wire	mmcm0_locked;
 
+wire	pll0_clk_in0;
+wire	pll0_clk_in1;
+wire	pll0_clk_out0;
+wire	pll0_clk_out1;
+wire	pll0_reset;
+wire	pll0_locked;
 
 wire    div_clk3_o;
 wire    div_clk3_ce;
@@ -49,13 +50,14 @@ IBUF clkin_ibuf
 (    .o    (clk_src_ibuf),
      .I    (clk_src));
 
-mmcm0_wrapper mmcm0(
-   .clk_out0   (mmcm0_clk_out0),
-   .clk_out1   (mmcm0_clk_out1),
-   .clk_in0    (mmcm0_clk_in0)
-   .reset      (mmcm0_reset),
-   .locked     (mmcm0_locked));
 
+pll0_wrapper pll0(
+	.clk_in0	(pll0_clk_in0),
+	.clk_in1	(pll0_clk_in1),
+	.clk_out0	(pll0_clk_out0),
+	.clk_out1	(pll0_clk_out1),
+	.reset		(pll0_reset),
+	.locked		(pll0_locked));
 
 BUFGCE_DIV #(
    .BUFGCE_DIVIDE      (6.0),
@@ -116,11 +118,9 @@ assign    clk1_src_arst                 =    ~rst_n_sys;
 assign    clk3                          =    bufgce_clk3_clk_out;
 assign    clk3_dest_clk                 =    clk3;
 assign    clk3_src_arst                 =    ~rst_n_sys;
-assign    div_clk3_i                    =    mmcm0_clk_out1
-assign    mmcm0_clk_in0                 =    clk_src_ibuf;
-assign    mmcm0_reset                   =    ~rst_n_sys;
-assign    mux_clk1_clk_in_0             =    mmcm0_clk_out1;
-assign    mux_clk1_clk_in_1             =    mmcm0_clk_out0;
+assign    div_clk3_i                    =    pll0_clk_out1
+assign    mux_clk1_clk_in_0             =    pll0_clk_out1;
+assign    mux_clk1_clk_in_1             =    pll0_clk_out0;
 assign    mux_clk1_sel                  =    clk1_sel;
 assign    rst_clk1                      =    clk1_dest_arst;
 assign    rst_clk3                      =    clk3_dest_arst;

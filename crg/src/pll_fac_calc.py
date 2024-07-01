@@ -23,10 +23,13 @@ def pll_calc_later_factor(in_period, out_period, lst_factor):
     return selected_lst_factor
 
 def pll_calc_fac(in_period, out_period, clkout_num):
-    # This function is used to calculate PLL factor.
+    # This function is used to calculate factor of a single PLL.
     # Mux out frequency number is 2.
     # If output is [], this PLL can not be gen.
+    print(in_period)
+    print(out_period)
     lst_factor =   pll_calc_first_factor(in_period, out_period[0])
+    print(lst_factor)
     if(len(lst_factor)==0):
         # TODO
         # assert warnning
@@ -41,3 +44,32 @@ def pll_calc_fac(in_period, out_period, clkout_num):
         return  []
 
     return lst_factor[0]
+
+def pll_multi_calc_fac(domains):
+    # This function is used to calculate factor of all PLL
+    name_domains = list(domains.keys())
+    src_domain = name_domains.pop(0)
+    num_domains = len(name_domains) 
+    src_period = domains[src_domain]
+    pll_map = {src_domain:[]}
+    
+
+    # calculate which clock can be generated in a single PLL
+    while num_domains>0:
+        out_period = []
+        out_name = []
+        if num_domains>=2:
+            num_domains -= 2
+            for _ in range(2):
+                domain = name_domains.pop(0)
+                out_period.append(domains[domain])
+                out_name.append(domain)
+            factor = pll_calc_fac(src_period, out_period, 2)
+            print(factor)
+        else:
+            num_domains = 0
+            factor = pll_calc_fac(src_period, domains[name_domains[0]], 1)
+        pll_map[src_domain].append(["pll", out_name, factor])
+    
+    return pll_map
+                
