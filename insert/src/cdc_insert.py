@@ -11,6 +11,7 @@ import pyverilog.vparser.ast as ast
 import os
 import copy
 import re
+import math
 
    
 def modify_only_module_clk(inst, clk_domain):
@@ -480,7 +481,7 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
         else:
             r_port_list.append(port)
     
-    # TODO merge a w port and a r port from the same clock domain. Can it do?
+    # TODO merge a w port and a r port from the same clock domain. Can it?
     
     # build bram instance for each port
     num_w = len(w_port_list)
@@ -575,7 +576,7 @@ def main_axi_module_process(module_name, root_path):
                     portarg.portname = "axi_clk"
             break
         elif is_main_axi_module(inst):
-            main_axi_module_clk_bound(inst, "ap_clk", root_path)
+            main_axi_module_clk_bind(inst, "ap_clk", root_path)
 
     if end_flg==1:
         for inst in inst_list:
@@ -588,7 +589,7 @@ def main_axi_module_process(module_name, root_path):
         f.write(new_rtl)
     
 
-def main_axi_module_clk_bound(inst, clk_domain, root_path):
+def main_axi_module_clk_bind(inst, clk_domain, root_path):
     for portarg in inst.portlist:
         if isinstance(portarg.argname, ast.Identifier):
             if portarg.argname.name=="ap_clk":
@@ -610,25 +611,25 @@ def main_axi_module_clk_bound(inst, clk_domain, root_path):
 
     main_axi_module_process(inst.module, root_path)
  
-def axi_module_clk_bound(axi_module_list, clk_domain):
+def axi_module_clk_bind(axi_module_list, clk_domain):
     for axi_inst in axi_module_list:
         modify_only_module_clk(axi_inst, clk_domain)
 
-def main_module_clk_bound(main_module_list, module_map, root_path):
+def main_module_clk_bind(main_module_list, module_map, root_path):
     for main_inst in main_module_list:
         if is_ddr_controller(main_inst):
             # TODO, assert that user's config is wrong. It should be in ap_clk domain
             continue
         if is_main_axi_module(main_inst):
-            main_axi_module_clk_bound(main_inst, module_map[main_inst.module], root_path)
+            main_axi_module_clk_bind(main_inst, module_map[main_inst.module], root_path)
         else:
             modify_only_module_clk(main_inst, module_map[main_inst.module])
 
-def fifo_module_clk_bound(fifo_module_list, main_module_list, module_map):
+def fifo_module_clk_bind(fifo_module_list, main_module_list, module_map):
     for fifo_inst in fifo_module_list:
         modify_fifo_clk(fifo_inst, main_module_list, module_map)
 
-def ram_module_clk_bound(top_module_ast, ram_module_list, main_module_list, module_map, mux_always_list):
+def ram_module_clk_bind(top_module_ast, ram_module_list, main_module_list, module_map, mux_always_list):
     module_defs = DFS(top_module_ast, lambda node: isinstance(node, ast.ModuleDef))
     for module_def in module_defs:
         break
@@ -702,7 +703,40 @@ def org_rst_rm(top_module_ast):
     
     module_def.items = tuple(item_list)
 
-def fsm_clk_bound(top_module_ast, assign_list, pose_always_list, mux_always_list, main_module_list, fastest_clk, module_map):
+def gen_cnt(state_name, cnt_value, fastest_clk):
+    '''
+    always @(posedge clk) begin
+        if(rst==1'b1)
+            state_cnt <= 1'b0;
+        else if(state==1 & state_cnt!=max)
+            state_cnt <= state_cnt +1;
+        else
+            state_cnt <= 1'b0;
+    end
+    '''
+    bit_width = math.ceil(math.log2(cnt_value-1))
+    cnt_name = state_name+"_cnt"
+    new_decl = ast.Reg(cnt_name, ast.Width(ast.IntConst("0"), ast.IntConst(str(bit_width))))
+    new_always = ast.Always(ast.SensList([ast.Sens(ast.Identifier(fastest_clk))]),
+                            ast.Block([ast.IfStatement(ast.Eq(ast.Identifier("rst_"+fastest_clk), 
+                                                              ast.IntConst("1'b1")),
+                                                       ast.Block([ast.NonblockingSubstitution(ast.Identifier(cnt_name), 
+                                                                                              ast.IntConst("1'b0"))]),
+                                                       ast.Block([ast.IfStatement(ast.And(ast.Eq(ast.Identifier(state_name), 
+                                                                                                 ast.IntConst("1'b1")),
+                                                                                          ast.NotEq(ast.Identifier(cnt_name), 
+                                                                                                    ast.IntConst(str(cnt_value-1)))),
+                                                                                  ast.Block([ast.NonblockingSubstitution(ast.Identifier(cnt_name), 
+                                                                                                                         ast.Plus(ast.Identifier(cnt_name),
+                                                                                                                                  ast.IntConst("1'b1")))]),
+                                                                                  ast.Block([ast.NonblockingSubstitution(ast.Identifier(cnt_name),
+                                                                                                                         ast.IntConst("1'b1"))]))]))]))
+    return new_decl, new_always
+    
+
+
+def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list, case_always_list, main_module_list, fastest_clk_map, module_map):
+    fastest_clk = fastest_clk_map[0]
     # sync ready and done signals 
     rm_sig = []
     rm_always = []
@@ -712,6 +746,7 @@ def fsm_clk_bound(top_module_ast, assign_list, pose_always_list, mux_always_list
     add_async_inst = []
     add_assign = []
     add_decl = []
+    add_always = []
     for assign in assign_list:
         match_sync = re.search(r'ap_sync_(\w+)', assign.left.var.name)
         if match_sync:
@@ -742,7 +777,7 @@ def fsm_clk_bound(top_module_ast, assign_list, pose_always_list, mux_always_list
     for always in pose_always_list:
         if isinstance(always.statement.statements[0], ast.IfStatement):
             var = always.statement.statements[0].true_statement.statements[0].left.var.name
-            # bound to the fastest clock
+            # bind to the fastest clock
             if (var=="ap_CS_fsm") or (var=="ap_done_reg") or (var in mdfy_always):
                 always.sens_list.list[0].sig.name = fastest_clk
                 always.statement.statements[0].cond.left.name = "rst_"+fastest_clk
@@ -751,10 +786,11 @@ def fsm_clk_bound(top_module_ast, assign_list, pose_always_list, mux_always_list
                 rm_always.append(always)
 
             # deal with start signals 
-            # 1. for FSM_states, sync them
-            # 2. pipe FSM_states with "round(fsm_clk/target_clk)+2"
-            # 3. add a flag to indicate if ready and end assert at the same time
+            # 1. for FSM_states related condition, sync them
+            # 2. pipe FSM
+            # 3. add "ap_done" to the condition for aux
             elif "_ap_start_reg" in var:
+                # 1. for FSM_states, sync them
                 eq_async = copy.deepcopy(always.statement.statements[0].false_statement.statements[0].cond)
                 eq_sync_assign = ast.Assign(ast.Lvalue(ast.Identifier(var+"_async_cond")), ast.Rvalue(eq_async))
                 add_assign.append(eq_sync_assign)
@@ -763,6 +799,8 @@ def fsm_clk_bound(top_module_ast, assign_list, pose_always_list, mux_always_list
                 out_sig = var+"_sync_cond"
                 _, _, module = connect_to_module(var.replace("_reg",""), main_module_list)
                 out_clk = module_map[module.module]
+                if in_clk==out_clk:
+                    continue
                 gen_async_level_inst("async_inst_"+in_sig, in_sig, in_clk, out_sig, out_clk)
                 async_inst_ast, _ = rtl_parse(["./async_inst_"+in_sig+"_inst.v"])
                 os.system("rm async_inst_"+in_sig+"_inst.v")
@@ -775,14 +813,47 @@ def fsm_clk_bound(top_module_ast, assign_list, pose_always_list, mux_always_list
                 sync_decl_wire_start = ast.Decl([ast.Wire(in_sig)])
                 add_decl.append(sync_decl_reg_start)
                 add_decl.append(sync_decl_wire_start)
+                # 2. pipe FSM, here only colect all states need to pipe. 
+                #    pipe will be implemented after the for loop
+                state_to_pipe = []
+                if isinstance(eq_async, ast.Eq):
+                    state_to_pipe.append([eq_async.right.name, out_clk])
+                elif isinstance(eq_async, ast.Or):
+                    if isinstance(eq_async.left, ast.Eq):
+                        state_to_pipe.append([eq_async.left.right.name, out_clk])
+                    
+                # 3. add "ap_done" to the condition for aux
                 eq_sync = ast.And(ast.Lvalue(ast.Identifier(out_sig)), 
                                   ast.Rvalue(ast.Eq(ast.Lvalue(ast.Identifier(var.replace("start_reg", "done"))), 
                                                     ast.Rvalue(ast.Identifier("1'b0")))))
                 always.statement.statements[0].false_statement.statements[0].cond = eq_sync
                 always.sens_list.list[0].sig.name = out_clk
                 always.statement.statements[0].cond.left.name = "rst_"+out_clk
-                
 
+    for case_item in case_always_list[0].statement.statements[0].caselist:
+        if case_item.cond==None:
+            continue
+        for pipe_item in state_to_pipe:
+            if case_item.cond[0].name[9:] == pipe_item[0][9:]:
+                # add a counter
+                state_name = pipe_item[0]
+                for fastest_clk_map_idx in range(1,len(fastest_clk_map)):
+                    if fastest_clk_map[fastest_clk_map_idx][0]==pipe_item[1]:
+                        cnt_value = fastest_clk_map[fastest_clk_map_idx][1]
+                cnt_decl, cnt_always = gen_cnt(state_name, cnt_value, fastest_clk)
+                add_decl.append(cnt_decl)
+                add_always.append(cnt_always)
+                # TODO change the fsm
+                print(case_item.statement.statements[0])
+                temp_statement =ast.Block([ast.IfStatement(ast.Eq(ast.Lvalue(ast.Identifier(state_name+"_cnt")),
+                                                                                      ast.Rvalue(ast.Identifier(str(cnt_value-1)))),
+                                                                               ast.Block([case_item.statement.statements[0]]),
+                                                                               ast.Block([ast.BlockingSubstitution(ast.Identifier("ap_NS_fsm"),
+                                                                                                                   ast.Identifier(case_item.cond[0].name))]))]) 
+                case_item.statement.statements = tuple([temp_statement])
+                
+                
+    # deal with ap_continue
     for always in mux_always_list:
         var = always.statement.statements[0].true_statement.statements[0].left.var.name
         if "ap_continue" in var:
@@ -792,6 +863,7 @@ def fsm_clk_bound(top_module_ast, assign_list, pose_always_list, mux_always_list
             in_clk = fastest_clk
             if in_clk==out_clk:
                 continue
+            # add sync inst 
             out_sig = in_sig+"_sync"
             gen_async_pulse_inst("async_inst_"+in_sig, in_sig, in_clk, out_sig, out_clk)
             async_inst_ast, _ = rtl_parse(["./async_inst_"+in_sig+"_inst.v"])
@@ -815,7 +887,7 @@ def fsm_clk_bound(top_module_ast, assign_list, pose_always_list, mux_always_list
     item_list = list(module_def.items)
     for rm_item in rm_decl+rm_always+rm_assign:
         item_list.remove(rm_item)
-    item_list += add_async_inst + add_assign
+    item_list += add_async_inst + add_assign + add_always
     for item_idx in range(len(item_list)):
         if isinstance(item_list[item_idx], ast.Decl):
             if isinstance(item_list[item_idx].list[0], ast.Reg):
@@ -823,18 +895,21 @@ def fsm_clk_bound(top_module_ast, assign_list, pose_always_list, mux_always_list
     item_list = item_list[0:item_idx] + add_decl + item_list[item_idx:]
     module_def.items = tuple(item_list)
         
-def cdc_insert(module_name, module_map, fastest_clk, root_path):
+def cdc_insert(module_name, module_map, fastest_clk_map, root_path):
     top_module_ast, axi_module_list, cg_module_list, main_module_list, fifo_module_list, ram_module_list, other_module_list, pose_always_list, case_always_list, assign_always_list, mux_always_list, assign_list = read_file(module_name, module_map, root_path)
-    ram_module_clk_bound(top_module_ast, ram_module_list, main_module_list, module_map, mux_always_list)
-    #axi_module_clk_bound(axi_module_list, module_map[module_name]) #maintain the clock
-    main_module_clk_bound(main_module_list, module_map, root_path)
-    fifo_module_clk_bound(fifo_module_list, main_module_list, module_map)
+    ram_module_clk_bind(top_module_ast, ram_module_list, main_module_list, module_map, mux_always_list)
+    #axi_module_clk_bind(axi_module_list, module_map[module_name]) #maintain the clock
+    main_module_clk_bind(main_module_list, module_map, root_path)
+    fifo_module_clk_bind(fifo_module_list, main_module_list, module_map)
     #org_rst_rm(top_module_ast) # reserve for axi
-    fsm_clk_bound(top_module_ast, assign_list, pose_always_list, mux_always_list, main_module_list, fastest_clk, module_map)
+    fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list, case_always_list, main_module_list, fastest_clk_map, module_map)
     rtl_generator = ASTCodeGenerator()
     new_rtl = rtl_generator.visit(top_module_ast)
     with open(module_name+".v", 'w') as f:
         f.write(new_rtl) 
  
-cdc_insert("top", {"top": "clk_phy", "top_nondf_kernel_2mm": "clk1", "top_kernel3_x1": "clk2", "top_kernel3_x0": "clk3"}, "clk3", "./verilog/")
+clk_domains = {"clk1": '10', 'clk2': '2 5', 'clk3': '30'}
+module_map = {"top": "clk_phy", "top_nondf_kernel_2mm": "clk1", "top_kernel3_x1": "clk2", "top_kernel3_x0": "clk3"}
+fastest_clk_map = ["clk3", ["clk2", 15], ["clk1", 2]]
+cdc_insert("top", module_map, fastest_clk_map, "./verilog/")
 #cdc_insert("rwkv_top", {"rwkv_top": "clk_phy", "rwkv_top_read_all115": "clk1", "rwkv_top_layer_common_s": "clk2", "rwkv_top_write_all": "clk3"}, "../../../rwkv_src/verilog/")
