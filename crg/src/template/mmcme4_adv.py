@@ -1,5 +1,3 @@
-from mmcm_fac_calc import mmcm_multi_calc_fac
-
 def gen_mmcme4_file(module_name, factors):
 
     clkin_period = factors[0]

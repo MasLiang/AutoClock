@@ -6,7 +6,7 @@ from cdc.src.template.async_dpram import *
 from cdc.src.template.async_fifo import *
 from cdc.src.template.async_pulse import *
 from cdc.src.template.async_level import *
-from parser import *
+from .parser import *
 import pyverilog.vparser.ast as ast
 import os
 import copy
@@ -319,6 +319,7 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
         # connect to mux, but only a data gate
         if len(port[7])==1:
             flag, _, module = connect_to_module(port[7][0], main_module_list)
+            port[8] = module
             if flag:
                 port[8] = module_map[module.module]
             port[7] = [port[7][0].name]
@@ -774,6 +775,7 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
             rm_assign.append(assign)
             continue
  
+    state_to_pipe = []
     for always in pose_always_list:
         if isinstance(always.statement.statements[0], ast.IfStatement):
             var = always.statement.statements[0].true_statement.statements[0].left.var.name
@@ -800,6 +802,8 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
                 _, _, module = connect_to_module(var.replace("_reg",""), main_module_list)
                 out_clk = module_map[module.module]
                 if in_clk==out_clk:
+                    always.sens_list.list[0].sig.name = in_clk
+                    always.statement.statements[0].cond.left.name = "rst_"+in_clk
                     continue
                 gen_async_level_inst("async_inst_"+in_sig, in_sig, in_clk, out_sig, out_clk)
                 async_inst_ast, _ = rtl_parse(["./async_inst_"+in_sig+"_inst.v"])
@@ -815,7 +819,6 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
                 add_decl.append(sync_decl_wire_start)
                 # 2. pipe FSM, here only colect all states need to pipe. 
                 #    pipe will be implemented after the for loop
-                state_to_pipe = []
                 if isinstance(eq_async, ast.Eq):
                     state_to_pipe.append([eq_async.right.name, out_clk])
                 elif isinstance(eq_async, ast.Or):
@@ -844,7 +847,6 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
                 add_decl.append(cnt_decl)
                 add_always.append(cnt_always)
                 # TODO change the fsm
-                print(case_item.statement.statements[0])
                 temp_statement =ast.Block([ast.IfStatement(ast.Eq(ast.Lvalue(ast.Identifier(state_name+"_cnt")),
                                                                                       ast.Rvalue(ast.Identifier(str(cnt_value-1)))),
                                                                                ast.Block([case_item.statement.statements[0]]),
@@ -854,6 +856,7 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
                 
                 
     # deal with ap_continue
+    # since ap_continue is a pulst, it need to be delayed to longer
     for always in mux_always_list:
         var = always.statement.statements[0].true_statement.statements[0].left.var.name
         if "ap_continue" in var:
@@ -878,6 +881,13 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
                 if isinstance(portarg.argname, ast.Identifier):
                     if portarg.argname.name==in_sig:
                         portarg.argname.name = out_sig
+            # change the always so that the pulse will be longer
+            always.statement.statements[0].false_statement = ast.IfStatement(ast.Eq(ast.Identifier(out_sig),
+                                                                                    ast.IntConst("1'b1")),
+                                                                             ast.Block([ast.BlockingSubstitution(ast.Identifier(in_sig),
+                                                                                                                 ast.IntConst("1'b0"))]), 
+                                                                             ast.Block([ast.BlockingSubstitution(ast.Identifier(in_sig),
+                                                                                                                 ast.Identifier(in_sig))])) 
  
 
     # update the ast
@@ -907,9 +917,10 @@ def cdc_insert(module_name, module_map, fastest_clk_map, root_path):
     new_rtl = rtl_generator.visit(top_module_ast)
     with open(module_name+".v", 'w') as f:
         f.write(new_rtl) 
+    os.system("mv *.v "+root_path)
+    
  
-clk_domains = {"clk1": '10', 'clk2': '2 5', 'clk3': '30'}
-module_map = {"top": "clk_phy", "top_nondf_kernel_2mm": "clk1", "top_kernel3_x1": "clk2", "top_kernel3_x0": "clk3"}
-fastest_clk_map = ["clk3", ["clk2", 15], ["clk1", 2]]
-cdc_insert("top", module_map, fastest_clk_map, "./verilog/")
-#cdc_insert("rwkv_top", {"rwkv_top": "clk_phy", "rwkv_top_read_all115": "clk1", "rwkv_top_layer_common_s": "clk2", "rwkv_top_write_all": "clk3"}, "../../../rwkv_src/verilog/")
+#clk_domains = {"clk1": '10', 'clk2': '2 5', 'clk3': '30'}
+#module_map = {"top": "clk_phy", "top_nondf_kernel_2mm": "clk1", "top_kernel3_x1": "clk2", "top_kernel3_x0": "clk3"}
+#fastest_clk_map = ["clk3", ["clk2", 15], ["clk1", 2]]
+#cdc_insert("top", module_map, fastest_clk_map, "./verilog/")

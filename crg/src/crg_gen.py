@@ -1,15 +1,15 @@
-from template.mmcme4_adv import *
-from template.plle4_adv import *
-from template.bufgmux import *
-from template.bufgce_div import *
-from template.rst_sync import *
-from template.bufgce import *
-from clk_domain_analyze import clk_resource_cal
-from clk_domain_extract import extract_clk_domains
+from .template.mmcme4_adv import *
+from .template.plle4_adv import *
+from .template.bufgmux import *
+from .template.bufgce_div import *
+from .template.rst_sync import *
+from .template.bufgce import *
+from .clk_domain_analyze import clk_resource_cal
+from .clk_domain_extract import extract_clk_domains
 
 def crg_gen(file):
-    modules, domains, domains_sel_if = extract_clk_domains(file)
-    clk_map_mux, clk_map_bypass, clk_map_div, clk_map_mmcm = clk_resource_cal(domains)
+    modules, domains, domains_sel_if, fastest_clk_map= extract_clk_domains(file)
+    clk_map_mux, clk_map_bypass, clk_map_div, clk_map_mmcm, domains = clk_resource_cal(domains)
     
     lst_port = []
     lst_assign = []    
@@ -39,13 +39,13 @@ def crg_gen(file):
     lst_bufi_inst.append("(    .o    ("+src_clk+"_ibuf),")
     lst_bufi_inst.append("     .I    ("+src_clk+"));")
 
-    print("clk_map_mux" , clk_map_mux)
-    print("clk_map_bypass" , clk_map_bypass)
-    print("clk_map_div" , clk_map_div)
-    print("clk_map_mmcm" , clk_map_mmcm)
-    print("modules:", modules)
-    print("sel_if:", domains_sel_if)
-    print("domains:", domains)
+    #print("clk_map_mux" , clk_map_mux)
+    #print("clk_map_bypass" , clk_map_bypass)
+    #print("clk_map_div" , clk_map_div)
+    #print("clk_map_mmcm" , clk_map_mmcm)
+    #print("sel_if:", domains_sel_if)
+    #print("module:", modules)
+    #print("domains:", domains)
     
     # generate mmcm or pll to generate clks in domains
     for unit_idx in range(len(clk_map_mmcm[src_clk])):
@@ -270,4 +270,4 @@ def crg_gen(file):
             f.write("\n")        
         f.write("endmodule")
 
-crg_gen("example.c")
+    return domains, modules, fastest_clk_map

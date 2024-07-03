@@ -78,5 +78,4 @@ def mmcm_multi_calc_fac(domains):
 
 
 #domains = {"src_clk": 10, "clk1": 5, "clk2": 3, "clk3":19}
-#print(mmcm_multi_calc_fac(domains))
     

@@ -1,14 +1,13 @@
 from pyverilog.vparser.parser import parse as rtl_parse
 from pyverilog.ast_code_generator.codegen import ASTCodeGenerator
-from parser import *
+from .parser import *
 import pyverilog.vparser.ast as ast
 import os
 
 def crg_insert(module_name, root_path):
     # read crg
-    os.system("cp ../../crg/src/"+module_name+"_crg_inst.v .")
-    crg_ast, _ = rtl_parse(["./"+module_name+"_crg_inst.v"])
-    #os.system("rm ./"+module_name+"_crg_inst.v")
+    crg_ast, _ = rtl_parse([root_path+"/"+module_name+"_crg_inst.v"])
+    os.system("rm "+root_path+"/"+module_name+"_crg_inst.v")
     crg_instances = DFS(crg_ast, lambda node : isinstance(node, ast.Instance))
     for crg_inst in crg_instances:
         break
@@ -51,5 +50,5 @@ def crg_insert(module_name, root_path):
     with open(module_name+".v", 'w') as f:
         f.write(new_rtl) 
 
-crg_insert("top", "./verilog/")
+#crg_insert("top", "./verilog/")
 #cdc_insert("rwkv_top", {"rwkv_top": "clk_phy", "rwkv_top_read_all115": "clk1", "rwkv_top_layer_common_s": "clk2", "rwkv_top_write_all": "clk3"}, "../../../rwkv_src/verilog/")

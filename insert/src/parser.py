@@ -116,7 +116,6 @@ def read_file(module_name, module_map, root_path):
     case_always_list = []       # always block equal to an case based mux
     mux_always_list = []        # always block equal to an if based mux
     assign_always_list = []     # always block equal to an assign
-    print(file_path)
     top_module_ast, directives = rtl_parse([file_path])
     all_instances = DFS(top_module_ast, lambda node : isinstance(node, ast.Instance))
     all_instanceslist = DFS(top_module_ast, lambda node : isinstance(node, ast.InstanceList))

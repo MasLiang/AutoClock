@@ -11,9 +11,6 @@ def extract_func_calls(file_path):
     func_def_pattern = r'\b[\w\s\*]+\b\s+\b[\w]+\b\s*\([^\)]*\)\s*\{[^}]*\}'
     func_defs = re.findall(func_def_pattern, code)
     
-    for a in func_defs:
-        print(a)
-
     func_name_pattern = r'\b[\w_]+\b\s+[\w_]+\s*(?=\()'
     func_names_list = re.findall(func_name_pattern, code)
     func_names = set()

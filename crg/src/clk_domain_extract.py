@@ -1,4 +1,5 @@
 import re
+import math
 
 def extract_clk_domains(file_path):
     clk_domains = []
@@ -10,6 +11,7 @@ def extract_clk_domains(file_path):
     input_clk_pattern = r'\s*#pragma \s*HLS \s*inputclk \s*(\w+(?:_\w+)*)\s*(\d+(?:\s+\d+)*)'
     domain_pattern = r'\s*#pragma \s*HLS \s*clkdomain \s*(\w+(?:_\w+)*)\s*(\d+(?:\s+\d+)*)'
     sel_pattern = r'\s*#pragma\s*HLS\s*clksel\s*(\w+)\s*(\w+)'
+    new_lines = []
     with open(file_path, 'r') as file:
         for line in file:
             input_clk_match = re.match(input_clk_pattern, line)
@@ -18,8 +20,22 @@ def extract_clk_domains(file_path):
                 period = input_clk_match.group(2)
                 clk_domains = [clk_domain] + clk_domains
                 periods = [period] + periods
+                # check the function name
+                next_line = file.readline()
+                while next_line.strip() == "" or re.match(r"\s*#pragma \s*HLS*",next_line):
+                    next_line = file.readline()
+                module_match = re.search(r"\b(\w+)\s*\(", next_line)
+                if module_match:
+                    module = module_match.group(1)
+                    modules = [module]+modules
+                    new_lines.append(next_line)
+                else:
+                    modules = ["Unknown"]+modules
+                continue
+
             # remove comment lines
             if line.strip().startswith("//"):
+                new_lines.append(line)
                 continue
             domain_match = re.match(domain_pattern, line)
             if domain_match:
@@ -38,33 +54,39 @@ def extract_clk_domains(file_path):
                     domains_sel_if[match_mux.group(1)] = [match_mux.group(2)]
                 # check the function name
                 while next_line.strip() == "" or re.match(r"\s*#pragma \s*HLS*",next_line):
+                    new_lines.append(next_line)
                     next_line = file.readline()
                 module_match = re.search(r"\b(\w+)\s*\(", next_line)
                 if module_match:
                     module = module_match.group(1)
-                    modules.append(module)
+                    modules.append(modules[0]+"_"+module)
                     if match_mux:
                         domains_sel_if[match_mux.group(1)].append(module)
+                    new_lines.append(next_line)
                 else:
                     modules.append("Unknown")
+                continue
+            new_lines.append(line)
 
         domains, modules = clk_domains_map(clk_domains, periods, modules)
+
+    with open(file_path, 'w') as file:
+        for line in new_lines:
+            file.write(line)
     
     check_mux_if(domains_sel_if, file_path)
+    domains, fastest_clk_map = cal_fastest_clk_map(domains)
 
-    return modules, domains, domains_sel_if
+    return modules, domains, domains_sel_if, fastest_clk_map
 
 def clk_domains_map(clk_domains, periods, modules):
-    print(clk_domains)
-    print(periods)
     num_domains = len(clk_domains)
 
     module_clk_map = {}
     clk_period_map = {}
 
     for i in range(num_domains):
-        if i >0:
-            module_clk_map[modules[i-1]] = clk_domains[i]
+        module_clk_map[modules[i]] = clk_domains[i]
         clk_period_map[clk_domains[i]] = periods[i]
 
     return clk_period_map, module_clk_map
@@ -89,7 +111,6 @@ def check_mux_if(domains_if, file_path):
         module = domains_if[domain][1] 
         signal = domains_if[domain][0] 
         func_def_pattern = r'\b[\w\s*]+\b\s+'+re.escape(module)+r'\b\s*\([^\)]*\)\s*\{[^}]*\}'
-        print(module)
         func = re.search(func_def_pattern, code, re.DOTALL)
         # replace incorrect pragma
         func_content = func.group(0)
@@ -113,4 +134,38 @@ def check_mux_if(domains_if, file_path):
         
     with open(file_path, 'w') as file:
         file.write(code)
-                
+               
+def cal_fastest_clk_map(domains):
+    # this function is to find the fastest clk and the relationship with other clock
+    fastest_clk = 0
+    fastest_clk_map = []
+
+    for domain in list(domains.keys()):
+        periods = domains[domain].split()
+        periods = [int(x) for x in periods]
+        min_period = min(periods)
+        max_period = max(periods)
+        if fastest_clk==0:
+            fastest_clk = min_period
+        elif min_period<fastest_clk:
+            fastest_clk = min_period
+        fastest_clk_map.append([domain, max_period])
+
+    fastest_clk_domain = "fastest_clk"
+    for mapping_idx in range(len(fastest_clk_map)):
+        mapping = fastest_clk_map[mapping_idx]
+        if mapping[1]==fastest_clk:
+            fastest_clk_domain = mapping[0]
+            mapping[1] = 1
+            rm_mapping_idx = mapping_idx
+        else:
+            mapping[1] = int(math.ceil(mapping[1]/fastest_clk))
+
+    if fastest_clk_domain=="fastest_clk":
+        domains = {**domains, "fastest_clk":str(fastest_clk)}
+    else:
+        del fastest_clk_map[rm_mapping_idx]
+    fastest_clk_map = [fastest_clk_domain] + fastest_clk_map
+    
+    return domains, fastest_clk_map 
+         
