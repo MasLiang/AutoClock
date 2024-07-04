@@ -20,7 +20,7 @@ clk_domains, module_map, fastest_clk_map = crg_gen(cpp_path)
 ##using VITIS_HLS to generate 
 os.chdir(root_path)
 os.system("vitis_hls -f run_hls.tcl")
-os.system("cp "+root_path+"dut_backup.cpp"+" "+cpp_path)
+os.system("cp dut_backup.cpp dut.cpp")
 os.chdir("../")
 
 ## insert cdc circuit and do some modification
