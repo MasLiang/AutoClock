@@ -3,7 +3,7 @@ import pyverilog.vparser.ast as ast
 import os
 import copy
 import re
-from parser import *
+from .parser import *
 
 def determain_cgen(file_path, undf_flg):
     top_module_ast, directives = rtl_parse([file_path])
