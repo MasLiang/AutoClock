@@ -1,0 +1,688 @@
+Created by PLY version 3.11 (http://www.dabeaz.com/ply)
+
+Grammar
+
+Rule 0     S' -> source_text
+Rule 1     source_text -> description
+Rule 2     description -> definitions
+Rule 3     definitions -> definitions definition
+Rule 4     definitions -> definition
+Rule 5     definition -> moduledef
+Rule 6     definition -> pragma
+Rule 7     pragma -> LPAREN TIMES ID EQUALS expression TIMES RPAREN
+Rule 8     pragma -> LPAREN TIMES ID TIMES RPAREN
+Rule 9     moduledef -> MODULE modulename paramlist portlist items ENDMODULE
+Rule 10    modulename -> ID
+Rule 11    modulename -> SENS_OR
+Rule 12    paramlist -> DELAY LPAREN params RPAREN
+Rule 13    paramlist -> empty
+Rule 14    params -> params_begin param_end
+Rule 15    params_begin -> params_begin param
+Rule 16    params_begin -> param
+Rule 17    params -> param_end
+Rule 18    param -> PARAMETER param_substitution_list COMMA
+Rule 19    param -> PARAMETER SIGNED param_substitution_list COMMA
+Rule 20    param -> PARAMETER width param_substitution_list COMMA
+Rule 21    param -> PARAMETER SIGNED width param_substitution_list COMMA
+Rule 22    param -> PARAMETER INTEGER param_substitution_list COMMA
+Rule 23    param_end -> PARAMETER param_substitution_list
+Rule 24    param_end -> PARAMETER SIGNED param_substitution_list
+Rule 25    param_end -> PARAMETER width param_substitution_list
+Rule 26    param_end -> PARAMETER SIGNED width param_substitution_list
+Rule 27    param_end -> PARAMETER INTEGER param_substitution_list
+Rule 28    portlist -> LPAREN ports RPAREN SEMICOLON
+Rule 29    portlist -> LPAREN ioports RPAREN SEMICOLON
+Rule 30    portlist -> LPAREN RPAREN SEMICOLON
+Rule 31    portlist -> SEMICOLON
+Rule 32    ports -> ports COMMA portname
+Rule 33    ports -> portname
+Rule 34    portname -> ID
+Rule 35    sigtypes -> sigtypes sigtype
+Rule 36    sigtypes -> sigtype
+Rule 37    sigtype -> INPUT
+Rule 38    sigtype -> OUTPUT
+Rule 39    sigtype -> INOUT
+Rule 40    sigtype -> TRI
+Rule 41    sigtype -> REG
+Rule 42    sigtype -> LOGIC
+Rule 43    sigtype -> WIRE
+Rule 44    sigtype -> SIGNED
+Rule 45    sigtype -> SUPPLY0
+Rule 46    sigtype -> SUPPLY1
+Rule 47    ioports -> ioports COMMA ioport
+Rule 48    ioports -> ioport_head
+Rule 49    ioport -> sigtypes portname
+Rule 50    ioport -> sigtypes width portname
+Rule 51    ioport -> sigtypes width portname dimensions
+Rule 52    ioport_head -> sigtypes portname
+Rule 53    ioport_head -> sigtypes width portname
+Rule 54    ioport_head -> sigtypes width portname dimensions
+Rule 55    ioport -> portname
+Rule 56    width -> LBRACKET expression COLON expression RBRACKET
+Rule 57    length -> LBRACKET expression COLON expression RBRACKET
+Rule 58    dimensions -> dimensions length
+Rule 59    dimensions -> length
+Rule 60    items -> items item
+Rule 61    items -> item
+Rule 62    items -> empty
+Rule 63    item -> standard_item
+Rule 64    item -> generate
+Rule 65    standard_item -> decl
+Rule 66    standard_item -> integerdecl
+Rule 67    standard_item -> realdecl
+Rule 68    standard_item -> declassign
+Rule 69    standard_item -> parameterdecl
+Rule 70    standard_item -> localparamdecl
+Rule 71    standard_item -> genvardecl
+Rule 72    standard_item -> assignment
+Rule 73    standard_item -> always
+Rule 74    standard_item -> always_ff
+Rule 75    standard_item -> always_comb
+Rule 76    standard_item -> always_latch
+Rule 77    standard_item -> initial
+Rule 78    standard_item -> instance
+Rule 79    standard_item -> function
+Rule 80    standard_item -> task
+Rule 81    standard_item -> pragma
+Rule 82    decl -> sigtypes declnamelist SEMICOLON
+Rule 83    decl -> sigtypes width declnamelist SEMICOLON
+Rule 84    declnamelist -> declnamelist COMMA declname
+Rule 85    declnamelist -> declname
+Rule 86    declname -> ID
+Rule 87    declname -> ID dimensions
+Rule 88    declassign -> sigtypes declassign_element SEMICOLON
+Rule 89    declassign -> sigtypes width declassign_element SEMICOLON
+Rule 90    declassign_element -> ID EQUALS rvalue
+Rule 91    declassign_element -> delays ID EQUALS delays rvalue
+Rule 92    integerdecl -> INTEGER integernamelist SEMICOLON
+Rule 93    integerdecl -> INTEGER SIGNED integernamelist SEMICOLON
+Rule 94    integernamelist -> integernamelist COMMA integername
+Rule 95    integernamelist -> integername
+Rule 96    integername -> ID EQUALS rvalue
+Rule 97    integername -> ID
+Rule 98    realdecl -> REAL realnamelist SEMICOLON
+Rule 99    realnamelist -> realnamelist COMMA realname
+Rule 100   realnamelist -> realname
+Rule 101   realname -> ID
+Rule 102   parameterdecl -> PARAMETER param_substitution_list SEMICOLON
+Rule 103   parameterdecl -> PARAMETER SIGNED param_substitution_list SEMICOLON
+Rule 104   parameterdecl -> PARAMETER width param_substitution_list SEMICOLON
+Rule 105   parameterdecl -> PARAMETER SIGNED width param_substitution_list SEMICOLON
+Rule 106   parameterdecl -> PARAMETER INTEGER param_substitution_list SEMICOLON
+Rule 107   localparamdecl -> LOCALPARAM param_substitution_list SEMICOLON
+Rule 108   localparamdecl -> LOCALPARAM SIGNED param_substitution_list SEMICOLON
+Rule 109   localparamdecl -> LOCALPARAM width param_substitution_list SEMICOLON
+Rule 110   localparamdecl -> LOCALPARAM SIGNED width param_substitution_list SEMICOLON
+Rule 111   localparamdecl -> LOCALPARAM INTEGER param_substitution_list SEMICOLON
+Rule 112   param_substitution_list -> param_substitution_list COMMA param_substitution
+Rule 113   param_substitution_list -> param_substitution
+Rule 114   param_substitution -> ID EQUALS rvalue
+Rule 115   assignment -> ASSIGN lvalue EQUALS rvalue SEMICOLON
+Rule 116   assignment -> ASSIGN delays lvalue EQUALS delays rvalue SEMICOLON
+Rule 117   lpartselect -> pointer LBRACKET expression COLON expression RBRACKET
+Rule 118   lpartselect -> pointer LBRACKET expression PLUSCOLON expression RBRACKET
+Rule 119   lpartselect -> pointer LBRACKET expression MINUSCOLON expression RBRACKET
+Rule 120   lpartselect -> identifier LBRACKET expression COLON expression RBRACKET
+Rule 121   lpartselect -> identifier LBRACKET expression PLUSCOLON expression RBRACKET
+Rule 122   lpartselect -> identifier LBRACKET expression MINUSCOLON expression RBRACKET
+Rule 123   lpointer -> pointer
+Rule 124   lconcat -> LBRACE lconcatlist RBRACE
+Rule 125   lconcatlist -> lconcatlist COMMA lconcat_one
+Rule 126   lconcatlist -> lconcat_one
+Rule 127   lconcat_one -> identifier
+Rule 128   lconcat_one -> lpartselect
+Rule 129   lconcat_one -> lpointer
+Rule 130   lconcat_one -> lconcat
+Rule 131   lvalue -> lpartselect
+Rule 132   lvalue -> lpointer
+Rule 133   lvalue -> lconcat
+Rule 134   lvalue -> identifier
+Rule 135   rvalue -> expression
+Rule 136   expression -> MINUS expression
+Rule 137   expression -> PLUS expression
+Rule 138   expression -> LNOT expression
+Rule 139   expression -> NOT expression
+Rule 140   expression -> AND expression
+Rule 141   expression -> NAND expression
+Rule 142   expression -> NOR expression
+Rule 143   expression -> OR expression
+Rule 144   expression -> XOR expression
+Rule 145   expression -> XNOR expression
+Rule 146   expression -> expression POWER expression
+Rule 147   expression -> expression TIMES expression
+Rule 148   expression -> expression DIVIDE expression
+Rule 149   expression -> expression MOD expression
+Rule 150   expression -> expression PLUS expression
+Rule 151   expression -> expression MINUS expression
+Rule 152   expression -> expression LSHIFT expression
+Rule 153   expression -> expression RSHIFT expression
+Rule 154   expression -> expression LSHIFTA expression
+Rule 155   expression -> expression RSHIFTA expression
+Rule 156   expression -> expression LT expression
+Rule 157   expression -> expression GT expression
+Rule 158   expression -> expression LE expression
+Rule 159   expression -> expression GE expression
+Rule 160   expression -> expression EQ expression
+Rule 161   expression -> expression NE expression
+Rule 162   expression -> expression EQL expression
+Rule 163   expression -> expression NEL expression
+Rule 164   expression -> expression AND expression
+Rule 165   expression -> expression XOR expression
+Rule 166   expression -> expression XNOR expression
+Rule 167   expression -> expression OR expression
+Rule 168   expression -> expression LAND expression
+Rule 169   expression -> expression LOR expression
+Rule 170   expression -> expression COND expression COLON expression
+Rule 171   expression -> LPAREN expression RPAREN
+Rule 172   expression -> concat
+Rule 173   expression -> repeat
+Rule 174   expression -> partselect
+Rule 175   expression -> pointer
+Rule 176   expression -> functioncall
+Rule 177   expression -> systemcall
+Rule 178   expression -> identifier
+Rule 179   expression -> const_expression
+Rule 180   concat -> LBRACE concatlist RBRACE
+Rule 181   concatlist -> concatlist COMMA expression
+Rule 182   concatlist -> expression
+Rule 183   repeat -> LBRACE expression concat RBRACE
+Rule 184   partselect -> identifier LBRACKET expression COLON expression RBRACKET
+Rule 185   partselect -> identifier LBRACKET expression PLUSCOLON expression RBRACKET
+Rule 186   partselect -> identifier LBRACKET expression MINUSCOLON expression RBRACKET
+Rule 187   partselect -> pointer LBRACKET expression COLON expression RBRACKET
+Rule 188   partselect -> pointer LBRACKET expression PLUSCOLON expression RBRACKET
+Rule 189   partselect -> pointer LBRACKET expression MINUSCOLON expression RBRACKET
+Rule 190   pointer -> identifier LBRACKET expression RBRACKET
+Rule 191   pointer -> pointer LBRACKET expression RBRACKET
+Rule 192   const_expression -> intnumber
+Rule 193   const_expression -> floatnumber
+Rule 194   const_expression -> stringliteral
+Rule 195   floatnumber -> FLOATNUMBER
+Rule 196   intnumber -> INTNUMBER_DEC
+Rule 197   intnumber -> SIGNED_INTNUMBER_DEC
+Rule 198   intnumber -> INTNUMBER_BIN
+Rule 199   intnumber -> SIGNED_INTNUMBER_BIN
+Rule 200   intnumber -> INTNUMBER_OCT
+Rule 201   intnumber -> SIGNED_INTNUMBER_OCT
+Rule 202   intnumber -> INTNUMBER_HEX
+Rule 203   intnumber -> SIGNED_INTNUMBER_HEX
+Rule 204   stringliteral -> STRING_LITERAL
+Rule 205   always -> ALWAYS senslist always_statement
+Rule 206   always_ff -> ALWAYS_FF senslist always_statement
+Rule 207   always_comb -> ALWAYS_COMB senslist always_statement
+Rule 208   always_latch -> ALWAYS_LATCH senslist always_statement
+Rule 209   senslist -> AT LPAREN edgesigs RPAREN
+Rule 210   edgesig -> POSEDGE edgesig_base
+Rule 211   edgesig -> NEGEDGE edgesig_base
+Rule 212   edgesig_base -> identifier
+Rule 213   edgesig_base -> pointer
+Rule 214   edgesigs -> edgesigs SENS_OR edgesig
+Rule 215   edgesigs -> edgesigs COMMA edgesig
+Rule 216   edgesigs -> edgesig
+Rule 217   senslist -> empty
+Rule 218   senslist -> AT levelsig
+Rule 219   senslist -> AT LPAREN levelsigs RPAREN
+Rule 220   levelsig -> levelsig_base
+Rule 221   levelsig_base -> identifier
+Rule 222   levelsig_base -> pointer
+Rule 223   levelsig_base -> partselect
+Rule 224   levelsigs -> levelsigs SENS_OR levelsig
+Rule 225   levelsigs -> levelsigs COMMA levelsig
+Rule 226   levelsigs -> levelsig
+Rule 227   senslist -> AT TIMES
+Rule 228   senslist -> AT LPAREN TIMES RPAREN
+Rule 229   basic_statement -> if_statement
+Rule 230   basic_statement -> case_statement
+Rule 231   basic_statement -> casex_statement
+Rule 232   basic_statement -> casez_statement
+Rule 233   basic_statement -> unique_case_statement
+Rule 234   basic_statement -> for_statement
+Rule 235   basic_statement -> while_statement
+Rule 236   basic_statement -> event_statement
+Rule 237   basic_statement -> wait_statement
+Rule 238   basic_statement -> forever_statement
+Rule 239   basic_statement -> block
+Rule 240   basic_statement -> namedblock
+Rule 241   basic_statement -> parallelblock
+Rule 242   basic_statement -> blocking_substitution
+Rule 243   basic_statement -> nonblocking_substitution
+Rule 244   basic_statement -> single_statement
+Rule 245   always_statement -> basic_statement
+Rule 246   blocking_substitution -> delays lvalue EQUALS delays rvalue SEMICOLON
+Rule 247   blocking_substitution_base -> delays lvalue EQUALS delays rvalue
+Rule 248   nonblocking_substitution -> delays lvalue LE delays rvalue SEMICOLON
+Rule 249   delays -> DELAY LPAREN expression RPAREN
+Rule 250   delays -> DELAY identifier
+Rule 251   delays -> DELAY intnumber
+Rule 252   delays -> DELAY floatnumber
+Rule 253   delays -> empty
+Rule 254   block -> BEGIN block_statements END
+Rule 255   block -> BEGIN END
+Rule 256   block_statements -> block_statements block_statement
+Rule 257   block_statements -> block_statement
+Rule 258   block_statement -> basic_statement
+Rule 259   namedblock -> BEGIN COLON ID namedblock_statements END
+Rule 260   namedblock -> BEGIN COLON ID END
+Rule 261   namedblock_statements -> namedblock_statements namedblock_statement
+Rule 262   namedblock_statements -> namedblock_statement
+Rule 263   namedblock_statement -> basic_statement
+Rule 264   namedblock_statement -> decl
+Rule 265   namedblock_statement -> integerdecl
+Rule 266   namedblock_statement -> realdecl
+Rule 267   namedblock_statement -> parameterdecl
+Rule 268   namedblock_statement -> localparamdecl
+Rule 269   parallelblock -> FORK block_statements JOIN
+Rule 270   parallelblock -> FORK JOIN
+Rule 271   if_statement -> IF LPAREN cond RPAREN true_statement ELSE else_statement
+Rule 272   if_statement -> IF LPAREN cond RPAREN true_statement
+Rule 273   if_statement -> delays IF LPAREN cond RPAREN true_statement ELSE else_statement
+Rule 274   if_statement -> delays IF LPAREN cond RPAREN true_statement
+Rule 275   cond -> expression
+Rule 276   ifcontent_statement -> basic_statement
+Rule 277   true_statement -> ifcontent_statement
+Rule 278   else_statement -> ifcontent_statement
+Rule 279   for_statement -> FOR LPAREN forpre forcond forpost RPAREN forcontent_statement
+Rule 280   forpre -> blocking_substitution
+Rule 281   forpre -> SEMICOLON
+Rule 282   forcond -> cond SEMICOLON
+Rule 283   forcond -> SEMICOLON
+Rule 284   forpost -> blocking_substitution_base
+Rule 285   forpost -> empty
+Rule 286   forcontent_statement -> basic_statement
+Rule 287   while_statement -> WHILE LPAREN cond RPAREN whilecontent_statement
+Rule 288   whilecontent_statement -> basic_statement
+Rule 289   case_statement -> CASE LPAREN case_comp RPAREN casecontent_statements ENDCASE
+Rule 290   casex_statement -> CASEX LPAREN case_comp RPAREN casecontent_statements ENDCASE
+Rule 291   casez_statement -> CASEZ LPAREN case_comp RPAREN casecontent_statements ENDCASE
+Rule 292   unique_case_statement -> UNIQUE CASE LPAREN case_comp RPAREN casecontent_statements ENDCASE
+Rule 293   case_comp -> expression
+Rule 294   casecontent_statements -> casecontent_statements casecontent_statement
+Rule 295   casecontent_statements -> casecontent_statement
+Rule 296   casecontent_statement -> casecontent_condition COLON basic_statement
+Rule 297   casecontent_condition -> casecontent_condition COMMA expression
+Rule 298   casecontent_condition -> expression
+Rule 299   casecontent_statement -> DEFAULT COLON basic_statement
+Rule 300   initial -> INITIAL initial_statement
+Rule 301   initial_statement -> basic_statement
+Rule 302   event_statement -> senslist SEMICOLON
+Rule 303   wait_statement -> WAIT LPAREN cond RPAREN waitcontent_statement
+Rule 304   waitcontent_statement -> basic_statement
+Rule 305   waitcontent_statement -> SEMICOLON
+Rule 306   forever_statement -> FOREVER basic_statement
+Rule 307   instance -> ID parameterlist instance_bodylist SEMICOLON
+Rule 308   instance -> SENS_OR parameterlist instance_bodylist SEMICOLON
+Rule 309   instance_bodylist -> instance_bodylist COMMA instance_body
+Rule 310   instance_bodylist -> instance_body
+Rule 311   instance_body -> ID LPAREN instance_ports RPAREN
+Rule 312   instance_body -> ID width LPAREN instance_ports RPAREN
+Rule 313   instance -> ID instance_bodylist_noname SEMICOLON
+Rule 314   instance -> SENS_OR instance_bodylist_noname SEMICOLON
+Rule 315   instance_bodylist_noname -> instance_bodylist_noname COMMA instance_body_noname
+Rule 316   instance_bodylist_noname -> instance_body_noname
+Rule 317   instance_body_noname -> LPAREN instance_ports RPAREN
+Rule 318   parameterlist -> DELAY LPAREN param_args RPAREN
+Rule 319   parameterlist -> DELAY LPAREN param_args_noname RPAREN
+Rule 320   parameterlist -> empty
+Rule 321   param_args_noname -> param_args_noname COMMA param_arg_noname
+Rule 322   param_args_noname -> param_arg_noname
+Rule 323   param_args -> param_args COMMA param_arg
+Rule 324   param_args -> param_arg
+Rule 325   param_args -> empty
+Rule 326   param_arg_noname -> expression
+Rule 327   param_arg -> DOT ID LPAREN expression RPAREN
+Rule 328   instance_ports -> instance_ports_list
+Rule 329   instance_ports -> instance_ports_arg
+Rule 330   instance_ports_list -> instance_ports_list COMMA instance_port_list
+Rule 331   instance_ports_list -> instance_port_list
+Rule 332   instance_ports_list -> empty
+Rule 333   instance_port_list -> expression
+Rule 334   instance_ports_arg -> instance_ports_arg COMMA instance_port_arg
+Rule 335   instance_ports_arg -> instance_port_arg
+Rule 336   instance_port_arg -> DOT ID LPAREN identifier RPAREN
+Rule 337   instance_port_arg -> DOT ID LPAREN expression RPAREN
+Rule 338   instance_port_arg -> DOT ID LPAREN RPAREN
+Rule 339   genvardecl -> GENVAR genvarlist SEMICOLON
+Rule 340   genvarlist -> genvarlist COMMA genvar
+Rule 341   genvarlist -> genvar
+Rule 342   genvar -> ID
+Rule 343   generate -> GENERATE generate_items ENDGENERATE
+Rule 344   generate_items -> empty
+Rule 345   generate_items -> generate_items generate_item
+Rule 346   generate_items -> generate_item
+Rule 347   generate_item -> standard_item
+Rule 348   generate_item -> generate_if
+Rule 349   generate_item -> generate_for
+Rule 350   generate_block -> BEGIN generate_items END
+Rule 351   generate_block -> BEGIN COLON ID generate_items END
+Rule 352   generate_if -> IF LPAREN cond RPAREN gif_true_item ELSE gif_false_item
+Rule 353   generate_if -> IF LPAREN cond RPAREN gif_true_item
+Rule 354   gif_true_item -> generate_item
+Rule 355   gif_true_item -> generate_block
+Rule 356   gif_false_item -> generate_item
+Rule 357   gif_false_item -> generate_block
+Rule 358   generate_for -> FOR LPAREN forpre forcond forpost RPAREN generate_forcontent
+Rule 359   generate_forcontent -> generate_item
+Rule 360   generate_forcontent -> generate_block
+Rule 361   systemcall -> DOLLER ID
+Rule 362   systemcall -> DOLLER ID LPAREN sysargs RPAREN
+Rule 363   systemcall -> DOLLER SIGNED LPAREN sysargs RPAREN
+Rule 364   sysargs -> sysargs COMMA sysarg
+Rule 365   sysargs -> sysarg
+Rule 366   sysargs -> empty
+Rule 367   sysarg -> expression
+Rule 368   function -> FUNCTION width ID SEMICOLON function_statement ENDFUNCTION
+Rule 369   function -> FUNCTION ID SEMICOLON function_statement ENDFUNCTION
+Rule 370   function -> FUNCTION INTEGER ID SEMICOLON function_statement ENDFUNCTION
+Rule 371   function_statement -> funcvardecls function_calc
+Rule 372   funcvardecls -> funcvardecls funcvardecl
+Rule 373   funcvardecls -> funcvardecl
+Rule 374   funcvardecl -> decl
+Rule 375   funcvardecl -> integerdecl
+Rule 376   function_calc -> blocking_substitution
+Rule 377   function_calc -> if_statement
+Rule 378   function_calc -> for_statement
+Rule 379   function_calc -> while_statement
+Rule 380   function_calc -> case_statement
+Rule 381   function_calc -> casex_statement
+Rule 382   function_calc -> casez_statement
+Rule 383   function_calc -> block
+Rule 384   function_calc -> namedblock
+Rule 385   functioncall -> identifier LPAREN func_args RPAREN
+Rule 386   func_args -> func_args COMMA expression
+Rule 387   func_args -> expression
+Rule 388   func_args -> empty
+Rule 389   task -> TASK ID SEMICOLON task_statement ENDTASK
+Rule 390   task_statement -> taskvardecls task_calc
+Rule 391   taskvardecls -> taskvardecls taskvardecl
+Rule 392   taskvardecls -> taskvardecl
+Rule 393   taskvardecls -> empty
+Rule 394   taskvardecl -> decl
+Rule 395   taskvardecl -> integerdecl
+Rule 396   task_calc -> blocking_substitution
+Rule 397   task_calc -> if_statement
+Rule 398   task_calc -> for_statement
+Rule 399   task_calc -> while_statement
+Rule 400   task_calc -> case_statement
+Rule 401   task_calc -> casex_statement
+Rule 402   task_calc -> casez_statement
+Rule 403   task_calc -> block
+Rule 404   task_calc -> namedblock
+Rule 405   identifier -> ID
+Rule 406   identifier -> scope ID
+Rule 407   scope -> identifier DOT
+Rule 408   scope -> pointer DOT
+Rule 409   disable -> DISABLE ID
+Rule 410   single_statement -> DELAY expression SEMICOLON
+Rule 411   single_statement -> systemcall SEMICOLON
+Rule 412   single_statement -> disable SEMICOLON
+Rule 413   empty -> <empty>
+
+Terminals, with rules where they appear
+
+ALWAYS               : 205
+ALWAYS_COMB          : 207
+ALWAYS_FF            : 206
+ALWAYS_LATCH         : 208
+AND                  : 140 164
+ASSIGN               : 115 116
+AT                   : 209 218 219 227 228
+BEGIN                : 254 255 259 260 350 351
+CASE                 : 289 292
+CASEX                : 290
+CASEZ                : 291
+COLON                : 56 57 117 120 170 184 187 259 260 296 299 351
+COMMA                : 18 19 20 21 22 32 47 84 94 99 112 125 181 215 225 297 309 315 321 323 330 334 340 364 386
+COND                 : 170
+DEFAULT              : 299
+DELAY                : 12 249 250 251 252 318 319 410
+DISABLE              : 409
+DIVIDE               : 148
+DOLLER               : 361 362 363
+DOT                  : 327 336 337 338 407 408
+ELSE                 : 271 273 352
+END                  : 254 255 259 260 350 351
+ENDCASE              : 289 290 291 292
+ENDFUNCTION          : 368 369 370
+ENDGENERATE          : 343
+ENDMODULE            : 9
+ENDTASK              : 389
+EQ                   : 160
+EQL                  : 162
+EQUALS               : 7 90 91 96 114 115 116 246 247
+FLOATNUMBER          : 195
+FOR                  : 279 358
+FOREVER              : 306
+FORK                 : 269 270
+FUNCTION             : 368 369 370
+GE                   : 159
+GENERATE             : 343
+GENVAR               : 339
+GT                   : 157
+ID                   : 7 8 10 34 86 87 90 91 96 97 101 114 259 260 307 311 312 313 327 336 337 338 342 351 361 362 368 369 370 389 405 406 409
+IF                   : 271 272 273 274 352 353
+INITIAL              : 300
+INOUT                : 39
+INPUT                : 37
+INTEGER              : 22 27 92 93 106 111 370
+INTNUMBER_BIN        : 198
+INTNUMBER_DEC        : 196
+INTNUMBER_HEX        : 202
+INTNUMBER_OCT        : 200
+JOIN                 : 269 270
+LAND                 : 168
+LBRACE               : 124 180 183
+LBRACKET             : 56 57 117 118 119 120 121 122 184 185 186 187 188 189 190 191
+LE                   : 158 248
+LNOT                 : 138
+LOCALPARAM           : 107 108 109 110 111
+LOGIC                : 42
+LOR                  : 169
+LPAREN               : 7 8 12 28 29 30 171 209 219 228 249 271 272 273 274 279 287 289 290 291 292 303 311 312 317 318 319 327 336 337 338 352 353 358 362 363 385
+LSHIFT               : 152
+LSHIFTA              : 154
+LT                   : 156
+MINUS                : 136 151
+MINUSCOLON           : 119 122 186 189
+MOD                  : 149
+MODULE               : 9
+NAND                 : 141
+NE                   : 161
+NEGEDGE              : 211
+NEL                  : 163
+NOR                  : 142
+NOT                  : 139
+OR                   : 143 167
+OUTPUT               : 38
+PARAMETER            : 18 19 20 21 22 23 24 25 26 27 102 103 104 105 106
+PLUS                 : 137 150
+PLUSCOLON            : 118 121 185 188
+POSEDGE              : 210
+POWER                : 146
+RBRACE               : 124 180 183
+RBRACKET             : 56 57 117 118 119 120 121 122 184 185 186 187 188 189 190 191
+REAL                 : 98
+REG                  : 41
+RPAREN               : 7 8 12 28 29 30 171 209 219 228 249 271 272 273 274 279 287 289 290 291 292 303 311 312 317 318 319 327 336 337 338 352 353 358 362 363 385
+RSHIFT               : 153
+RSHIFTA              : 155
+SEMICOLON            : 28 29 30 31 82 83 88 89 92 93 98 102 103 104 105 106 107 108 109 110 111 115 116 246 248 281 282 283 302 305 307 308 313 314 339 368 369 370 389 410 411 412
+SENS_OR              : 11 214 224 308 314
+SIGNED               : 19 21 24 26 44 93 103 105 108 110 363
+SIGNED_INTNUMBER_BIN : 199
+SIGNED_INTNUMBER_DEC : 197
+SIGNED_INTNUMBER_HEX : 203
+SIGNED_INTNUMBER_OCT : 201
+STRING_LITERAL       : 204
+SUPPLY0              : 45
+SUPPLY1              : 46
+TASK                 : 389
+TIMES                : 7 7 8 8 147 227 228
+TRI                  : 40
+UNIQUE               : 292
+WAIT                 : 303
+WHILE                : 287
+WIRE                 : 43
+XNOR                 : 145 166
+XOR                  : 144 165
+error                : 
+
+Nonterminals, with rules where they appear
+
+always               : 73
+always_comb          : 75
+always_ff            : 74
+always_latch         : 76
+always_statement     : 205 206 207 208
+assignment           : 72
+basic_statement      : 245 258 263 276 286 288 296 299 301 304 306
+block                : 239 383 403
+block_statement      : 256 257
+block_statements     : 254 256 269
+blocking_substitution : 242 280 376 396
+blocking_substitution_base : 284
+case_comp            : 289 290 291 292
+case_statement       : 230 380 400
+casecontent_condition : 296 297
+casecontent_statement : 294 295
+casecontent_statements : 289 290 291 292 294
+casex_statement      : 231 381 401
+casez_statement      : 232 382 402
+concat               : 172 183
+concatlist           : 180 181
+cond                 : 271 272 273 274 282 287 303 352 353
+const_expression     : 179
+decl                 : 65 264 374 394
+declassign           : 68
+declassign_element   : 88 89
+declname             : 84 85
+declnamelist         : 82 83 84
+definition           : 3 4
+definitions          : 2 3
+delays               : 91 91 116 116 246 246 247 247 248 248 273 274
+description          : 1
+dimensions           : 51 54 58 87
+disable              : 412
+edgesig              : 214 215 216
+edgesig_base         : 210 211
+edgesigs             : 209 214 215
+else_statement       : 271 273
+empty                : 13 62 217 253 285 320 325 332 344 366 388 393
+event_statement      : 236
+expression           : 7 56 56 57 57 117 117 118 118 119 119 120 120 121 121 122 122 135 136 137 138 139 140 141 142 143 144 145 146 146 147 147 148 148 149 149 150 150 151 151 152 152 153 153 154 154 155 155 156 156 157 157 158 158 159 159 160 160 161 161 162 162 163 163 164 164 165 165 166 166 167 167 168 168 169 169 170 170 170 171 181 182 183 184 184 185 185 186 186 187 187 188 188 189 189 190 191 249 275 293 297 298 326 327 333 337 367 386 387 410
+floatnumber          : 193 252
+for_statement        : 234 378 398
+forcond              : 279 358
+forcontent_statement : 279
+forever_statement    : 238
+forpost              : 279 358
+forpre               : 279 358
+func_args            : 385 386
+function             : 79
+function_calc        : 371
+function_statement   : 368 369 370
+functioncall         : 176
+funcvardecl          : 372 373
+funcvardecls         : 371 372
+generate             : 64
+generate_block       : 355 357 360
+generate_for         : 349
+generate_forcontent  : 358
+generate_if          : 348
+generate_item        : 345 346 354 356 359
+generate_items       : 343 345 350 351
+genvar               : 340 341
+genvardecl           : 71
+genvarlist           : 339 340
+gif_false_item       : 352
+gif_true_item        : 352 353
+identifier           : 120 121 122 127 134 178 184 185 186 190 212 221 250 336 385 407
+if_statement         : 229 377 397
+ifcontent_statement  : 277 278
+initial              : 77
+initial_statement    : 300
+instance             : 78
+instance_body        : 309 310
+instance_body_noname : 315 316
+instance_bodylist    : 307 308 309
+instance_bodylist_noname : 313 314 315
+instance_port_arg    : 334 335
+instance_port_list   : 330 331
+instance_ports       : 311 312 317
+instance_ports_arg   : 329 334
+instance_ports_list  : 328 330
+integerdecl          : 66 265 375 395
+integername          : 94 95
+integernamelist      : 92 93 94
+intnumber            : 192 251
+ioport               : 47
+ioport_head          : 48
+ioports              : 29 47
+item                 : 60 61
+items                : 9 60
+lconcat              : 130 133
+lconcat_one          : 125 126
+lconcatlist          : 124 125
+length               : 58 59
+levelsig             : 218 224 225 226
+levelsig_base        : 220
+levelsigs            : 219 224 225
+localparamdecl       : 70 268
+lpartselect          : 128 131
+lpointer             : 129 132
+lvalue               : 115 116 246 247 248
+moduledef            : 5
+modulename           : 9
+namedblock           : 240 384 404
+namedblock_statement : 261 262
+namedblock_statements : 259 261
+nonblocking_substitution : 243
+parallelblock        : 241
+param                : 15 16
+param_arg            : 323 324
+param_arg_noname     : 321 322
+param_args           : 318 323
+param_args_noname    : 319 321
+param_end            : 14 17
+param_substitution   : 112 113
+param_substitution_list : 18 19 20 21 22 23 24 25 26 27 102 103 104 105 106 107 108 109 110 111 112
+parameterdecl        : 69 267
+parameterlist        : 307 308
+paramlist            : 9
+params               : 12
+params_begin         : 14 15
+partselect           : 174 223
+pointer              : 117 118 119 123 175 187 188 189 191 213 222 408
+portlist             : 9
+portname             : 32 33 49 50 51 52 53 54 55
+ports                : 28 32
+pragma               : 6 81
+realdecl             : 67 266
+realname             : 99 100
+realnamelist         : 98 99
+repeat               : 173
+rvalue               : 90 91 96 114 115 116 246 247 248
+scope                : 406
+senslist             : 205 206 207 208 302
+sigtype              : 35 36
+sigtypes             : 35 49 50 51 52 53 54 82 83 88 89
+single_statement     : 244
+source_text          : 0
+standard_item        : 63 347
+stringliteral        : 194
+sysarg               : 364 365
+sysargs              : 362 363 364
+systemcall           : 177 411
+task                 : 80
+task_calc            : 390
+task_statement       : 389
+taskvardecl          : 391 392
+taskvardecls         : 390 391
+true_statement       : 271 272 273 274
+unique_case_statement : 233
+wait_statement       : 237
+waitcontent_statement : 303
+while_statement      : 235 379 399
+whilecontent_statement : 287
+width                : 20 21 25 26 50 51 53 54 83 89 104 105 109 110 312 368
+
+Parsing method: LALR

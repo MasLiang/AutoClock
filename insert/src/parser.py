@@ -103,6 +103,7 @@ def DFS(node, filter_func):
     yield from DFS(c, filter_func)
 
 def read_file(module_name, module_map, root_path):
+    print(module_name)
     file_path = root_path+"/"+module_name+".v"
     # this function is used to initial module set
     fifo_module_list = []       # all FIFO between two modules
