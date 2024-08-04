@@ -16,12 +16,9 @@ def determain_cgen(file_path, undf_flg):
         state_idx_list = []
         block_state_pattern = r'ap_ST_fsm_state(\d+)_blk'
         for reg in all_reg:
-            print(reg.name)
             match = re.search(block_state_pattern, reg.name)
             if match:
                 state_idx_list.append(match.group(1))
-                print("****")
-                print(match.group(0), match.group(1))
 
         cgen_n_or = ""
         if len(state_idx_list)>0:
@@ -59,42 +56,7 @@ def cg_insert_single_module(inst_name, root_path, undf_flg):
     with open(file_path, 'r') as file:
         var_def_flg = 0
         insert_flg = 0
-        first_apclk_flg = 0
-        first_apclk_flg = 0
         for line in file:
-            if "ap_clk" in line and first_apclk_flg==0:
-                first_apclk_flg = 1
-                new_rtl.append(line)
-            elif "ap_clk" in line and (not "input " in line):
-                next_line1 = file.readline()
-                next_line2 = file.readline()
-                if "if" in next_line2:
-                    next_line3 = file.readline()
-                    if "ap_CS_fsm" in next_line3:
-                        new_rtl.append(line)
-                        new_rtl.append(next_line1)
-                        new_rtl.append(next_line2)
-                        new_rtl.append(next_line3)
-                    else:
-                        line = line.replace("ap_clk", "ap_clk_cg")
-                        new_rtl.append(line)
-                        new_rtl.append(next_line1)
-                        new_rtl.append(next_line2)
-                        new_rtl.append(next_line3)
-                else:
-                    if "ap_CS_fsm" in next_line2:
-                        new_rtl.append(line)
-                        new_rtl.append(next_line1)
-                        new_rtl.append(next_line2)
-                        continue
-                    else:
-                        line = line.replace("ap_clk", "ap_clk_cg")
-                        new_rtl.append(line)
-                        new_rtl.append(next_line1)
-                        new_rtl.append(next_line2)
-            else:
-                new_rtl.append(line)
-                
             if insert_flg==0:
                 if var_def_flg==0:
                     if ("wire " in line or "reg " in line) and (not( "input " in line or "output " in line)):
@@ -104,6 +66,47 @@ def cg_insert_single_module(inst_name, root_path, undf_flg):
                         new_rtl += cg_list
                         var_def_flg = 0
                         insert_flg = 1
+                new_rtl.append(line)
+
+            elif "ap_clk" in line and (not "input " in line):
+                if "always" in line:
+                    next_line1 = file.readline()
+                    next_line2 = file.readline()
+                    if "if" in next_line2:
+                        next_line3 = file.readline()
+                        if "ap_CS_fsm" in next_line3:
+                            new_rtl.append(line)
+                            new_rtl.append(next_line1)
+                            new_rtl.append(next_line2)
+                            new_rtl.append(next_line3)
+                        else:
+                            line = line.replace("ap_clk", "ap_clk_cg")
+                            new_rtl.append(line)
+                            new_rtl.append(next_line1)
+                            new_rtl.append(next_line2)
+                            new_rtl.append(next_line3)
+                    else:
+                        if "ap_CS_fsm" in next_line2:
+                            new_rtl.append(line)
+                            new_rtl.append(next_line1)
+                            new_rtl.append(next_line2)
+                            continue
+                        else:
+                            line = line.replace("ap_clk", "ap_clk_cg")
+                            new_rtl.append(line)
+                            new_rtl.append(next_line1)
+                            new_rtl.append(next_line2)
+                elif line.count("ap_clk") == 2:
+                    # .ap_clk(ap_clk) --> .ap_clk(ap_clk_cg)
+                    parts = line.split('ap_clk')
+                    new_line = parts[0] + 'ap_clk' + parts[1] + 'ap_clk_cg' +parts[2]
+                    new_rtl.append(new_line)
+                else:
+                    line = line.replace("ap_clk", "ap_clk_cg")
+                    new_rtl.append(line)
+                    
+            else:
+                new_rtl.append(line)
 
     with open(file_path, "w") as f:
         for i in new_rtl:
@@ -137,4 +140,4 @@ def cg_insert(module_name, root_path):
             cg_insert_single_module(inst.module, root_path, undf_flg)
         
 
-cg_insert("top_kernel3_x0", "../../all_ab/dut/solution1/impl/verilog/")
+#cg_insert("top_kernel3_x0", "../../all_ab/dut/solution1/impl/verilog/")

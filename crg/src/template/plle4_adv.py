@@ -6,6 +6,8 @@ def gen_plle4_file(module_name, factors):
     clkfbout_mult = factors[3]
     clkout0_divide = factors[4]
     clkout1_divide = factors[5]
+    if clkout1_divide==0:
+        clkout1_divide = 1
     # TODO
     # diffriencial clock
     clkin_num = 1
@@ -116,7 +118,7 @@ def gen_plle4_inst(module_name, factors):
     lst_inst.append(module_name+"_wrapper "+module_name+"(")
     lst_inst.append("	.clk_in0	("+module_name+"_clk_in0),")
     lst_wire.append("wire	"+module_name+"_clk_in0;")
-    if(clkout_num>1):
+    if(clkin_num>1):
         lst_inst.append("	.clk_in1	("+module_name+"_clk_in1),")
         lst_wire.append("wire	"+module_name+"_clk_in1;")
     lst_inst.append("	.clk_out0	("+module_name+"_clk_out0),")

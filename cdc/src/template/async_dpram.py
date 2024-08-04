@@ -1,8 +1,4 @@
-def gen_async_bram_file(module_name, factors):
-    data_width = factors[0]
-    address_width = factors[1]
-    address_range = factors[2]
-
+def gen_async_bram_file(module_name):
     lst_port = []
     lst_wire = []
     lst_inst = []
@@ -32,14 +28,14 @@ def gen_async_bram_file(module_name, factors):
     lst_port.append("input ce0;")
     lst_port.append("input[DataWidth-1:0] d0;")
     lst_port.append("input we0;")
-    lst_port.append("output reg[DataWidth-1:0] q0;")
+    lst_port.append("output [DataWidth-1:0] q0;")
     lst_port.append("input reset0;")
     lst_port.append("input clk0;")
     lst_port.append("input[AddressWidth-1:0] address1;")
     lst_port.append("input ce1;")
     lst_port.append("input[DataWidth-1:0] d1;")
     lst_port.append("input we1;") 
-    lst_port.append("output reg[DataWidth-1:0] q1;")
+    lst_port.append("output [DataWidth-1:0] q1;")
     lst_port.append("input reset1;")
     lst_port.append("input clk1;")
 
@@ -64,7 +60,7 @@ def gen_async_bram_file(module_name, factors):
     lst_inst.append("      .MEMORY_INIT_PARAM(\"0\"),")
     lst_inst.append("      .MEMORY_OPTIMIZATION(\"true\"),")
     lst_inst.append("      .MEMORY_PRIMITIVE(\"auto\"),")
-    lst_inst.append("      .MEMORY_SIZE(address_range),")
+    lst_inst.append("      .MEMORY_SIZE(AddressRange*DataWidth),")
     lst_inst.append("      .MESSAGE_CONTROL(0),")
     lst_inst.append("      .RAM_DECOMP(\"auto\"),")
     lst_inst.append("      .READ_DATA_WIDTH_A(DataWidth),")
@@ -98,19 +94,19 @@ def gen_async_bram_file(module_name, factors):
     lst_inst.append("      .clkb             (clk1),")
     lst_inst.append("      .dina             (d0),")
     lst_inst.append("      .dinb             (d1),")
-    lst_inst.append("      .ena              (ena),")
-    lst_inst.append("      .enb              (enb),")
+    lst_inst.append("      .ena              (ce0),")
+    lst_inst.append("      .enb              (ce1),")
     lst_inst.append("      .injectdbiterra   (),")
     lst_inst.append("      .injectdbiterrb   (),")
     lst_inst.append("      .injectsbiterra   (),")
     lst_inst.append("      .injectsbiterrb   (),")
-    lst_inst.append("      .regcea           (regcea),")
-    lst_inst.append("      .regceb           (regceb),")
+    lst_inst.append("      .regcea           (1'b1),")
+    lst_inst.append("      .regceb           (1'b1),")
     lst_inst.append("      .rsta             (reset0),")
     lst_inst.append("      .rstb             (reset1),")
-    lst_inst.append("      .sleep            (sleep),")
-    lst_inst.append("      .wea              (wea),")
-    lst_inst.append("      .web              (web)")
+    lst_inst.append("      .sleep            (1'b0),")
+    lst_inst.append("      .wea              (we0),")
+    lst_inst.append("      .web              (we1)")
     lst_inst.append("   );")
     lst_inst.append("endmodule")
 
@@ -120,7 +116,7 @@ def gen_async_bram_file(module_name, factors):
             f.write("\n")
 
 def gen_async_bram_inst(module_name, inst_name, port_dic, factors):
-    gen_async_bram_file(module_name, factors)
+    gen_async_bram_file(module_name)
     
     data_width = factors[0]
     address_width = factors[1]
@@ -145,7 +141,7 @@ def gen_async_bram_inst(module_name, inst_name, port_dic, factors):
     lst_inst.append("    .q0            ("+port0[4]+"),")
     lst_inst.append("    .reset0        ("+port0[6]+"),") 
     lst_inst.append("    .clk0          ("+port0[5]+"),")
-    lst_inst.append("    .address0      ("+port1[2]+"),")
+    lst_inst.append("    .address1      ("+port1[2]+"),")
     lst_inst.append("    .ce1           ("+port1[0]+"),")
     lst_inst.append("    .d1            ("+port1[3]+"),")
     lst_inst.append("    .we1           ("+port1[1]+"),")

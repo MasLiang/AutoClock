@@ -3,13 +3,16 @@ from .template.plle4_adv import *
 from .template.bufgmux import *
 from .template.bufgce_div import *
 from .template.rst_sync import *
-from .template.bufgce import *
 from .clk_domain_analyze import clk_resource_cal
 from .clk_domain_extract import extract_clk_domains
 
 def crg_gen(file):
     modules, domains, domains_sel_if, fastest_clk_map= extract_clk_domains(file)
-    clk_map_mux, clk_map_bypass, clk_map_div, clk_map_mmcm, domains = clk_resource_cal(domains)
+    if(len(list(modules.keys()))==0):
+        print(" No user defined clock domains ")
+        return 0, modules, fastest_clk_map
+        
+    clk_map_mux, clk_map_bypass, clk_map_div, clk_map_mmcm = clk_resource_cal(domains)
     
     lst_port = []
     lst_assign = []    
@@ -23,8 +26,6 @@ def crg_gen(file):
     lst_bufgmux_inst = []
     lst_rst_sync_wire = []
     lst_rst_sync_inst = []
-    lst_bufgce_wire = []
-    lst_bufgce_inst = []
     lst_bufi_wire = []
     lst_bufi_inst = []
     lst_crg_inst = []
@@ -36,16 +37,16 @@ def crg_gen(file):
     
     lst_bufi_wire.append("wire    "+src_clk+"_ibuf;")
     lst_bufi_inst.append("IBUF clkin_ibuf")
-    lst_bufi_inst.append("(    .o    ("+src_clk+"_ibuf),")
+    lst_bufi_inst.append("(    .O    ("+src_clk+"_ibuf),")
     lst_bufi_inst.append("     .I    ("+src_clk+"));")
 
-    #print("clk_map_mux" , clk_map_mux)
-    #print("clk_map_bypass" , clk_map_bypass)
-    #print("clk_map_div" , clk_map_div)
-    #print("clk_map_mmcm" , clk_map_mmcm)
-    #print("sel_if:", domains_sel_if)
-    #print("module:", modules)
-    #print("domains:", domains)
+    print("clk_map_mux" , clk_map_mux)
+    print("clk_map_bypass" , clk_map_bypass)
+    print("clk_map_div" , clk_map_div)
+    print("clk_map_mmcm" , clk_map_mmcm)
+    print("sel_if:", domains_sel_if)
+    print("module:", modules)
+    print("domains:", domains)
     
     # generate mmcm or pll to generate clks in domains
     for unit_idx in range(len(clk_map_mmcm[src_clk])):
@@ -60,6 +61,8 @@ def crg_gen(file):
             lst_assign.append(f'''{'assign    mmcm'+str(unit_idx)+'_reset':<40}=    ~rst_n_sys;''')
         elif unit[0]=="pll":
             lst_pll = gen_plle4_inst("pll"+str(unit_idx),[clkin_period, clkout_num]+unit[2]+[0 for _ in range(2-clkout_num)])
+            lst_assign.append(f'''{'assign    pll'+str(unit_idx)+'_clk_in0':<40}=    {src_clk}_ibuf;''')
+            lst_assign.append(f'''{'assign    pll'+str(unit_idx)+'_reset':<40}=    ~rst_n_sys;''')
             lst_pll_wire += lst_pll[0]
             lst_pll_inst += lst_pll[1]
             
@@ -87,14 +90,14 @@ def crg_gen(file):
                     outlst_mmcm = clk_map_mmcm[src_clk][pll_mmcm_idx][1]
                     for clk_idx in range(len(outlst_mmcm)):
                         if clk_map_div[unit][1] ==outlst_mmcm[clk_idx]:
-                            lst_assign.append(f'''{'assign    div_'+unit+'_i':<40}=    mmcm{str(pll_mmcm_idx)}_clk_out{str(clk_idx)}''')
+                            lst_assign.append(f'''{'assign    div_'+unit+'_i':<40}=    mmcm{str(pll_mmcm_idx)}_clk_out{str(clk_idx)};''')
                             continue
                 # connect input of div to output of pll
                 elif clk_map_mmcm[src_clk][pll_mmcm_idx][0]=="pll":
                     outlst_pll = clk_map_mmcm[src_clk][pll_mmcm_idx][1]
                     for clk_idx in range(len(outlst_pll)):
                         if clk_map_div[unit][1] ==outlst_pll[clk_idx]:
-                            lst_assign.append(f'''{'assign    div_'+unit+'_i':<40}=    pll{str(pll_mmcm_idx)}_clk_out{str(clk_idx)}''')
+                            lst_assign.append(f'''{'assign    div_'+unit+'_i':<40}=    pll{str(pll_mmcm_idx)}_clk_out{str(clk_idx)};''')
                             continue
 
     
@@ -165,7 +168,7 @@ def crg_gen(file):
                                 continue
     
     # gen port
-    lst_port.append(f'''module {top_module}_crg{'{'}''')
+    lst_port.append(f'''module {top_module}_crg{'('}''')
     lst_crg_inst.append(f'''{top_module}_crg u_crg(''')
     for clk in lst_clk[1:]:
         if clk in domains_sel_if :
@@ -173,10 +176,6 @@ def crg_gen(file):
             lst_crg_inst.append(f'''{'    .'+clk+'_'+domains_sel_if[clk][0]:<40}({clk+'_'+domains_sel_if[clk][0]}),''')
             lst_crg_wire.append("wire    "+clk+'_'+domains_sel_if[clk][0]+";")
             lst_assign.append(f'''{'assign    mux_'+clk+'_sel':<40}=    {clk}_{domains_sel_if[clk][0]};''')
-        lst_port.append("   input       "+clk+"_en,")
-        lst_crg_inst.append(f'''{'    .'+clk+'_en':<40}({clk+'_en'}),''')
-        lst_crg_wire.append("wire    "+clk+"_en;")
-        lst_assign.append(f'''{'assign    bufgce_'+clk+'_gce':<40}=    {clk}_en;''')
         lst_port.append("   output      "+clk+",")
         lst_crg_inst.append(f'''{'   .'+clk:<40}({clk}),''')
         lst_crg_wire.append("wire    "+clk+";")
@@ -196,38 +195,22 @@ def crg_gen(file):
         if(clk==src_clk):
             continue
         elif clk in clk_map_mux:
-            lst_assign.append(f'''{'assign    '+clk:<40}=    bufgce_{clk}_clk_out;''')
-            lst_assign.append(f'''{'assign    bufgce_'+clk+"_clk_in":<40}=    mux_{clk}_clk_out;''')
-            lst_bufgce = gen_bufgce("bufgce_"+clk)
-            lst_bufgce_wire += lst_bufgce[0]
-            lst_bufgce_inst += lst_bufgce[1]
+            lst_assign.append(f'''{'assign    '+clk:<40}=    mux_{clk}_clk_out;''')
                 
         elif clk in clk_map_div:
-            lst_assign.append(f'''{'assign    '+clk:<40}=    bufgce_{clk}_clk_out;''')
-            lst_assign.append(f'''{'assign    bufgce_'+clk+'_clk_in':<40}=    div_{clk}_o;''')
-            lst_bufgce = gen_bufgce("bufgce_"+clk)
-            lst_bufgce_wire += lst_bufgce[0]
-            lst_bufgce_inst += lst_bufgce[1]
+            lst_assign.append(f'''{'assign    '+clk:<40}=    div_{clk}_o;''')
         else:
             for pll_mmcm_idx in range(len(clk_map_mmcm[src_clk])):
                 if(clk_map_mmcm[src_clk][pll_mmcm_idx][0]=="mmcm"):
                     outlst_mmcm = clk_map_mmcm[src_clk][pll_mmcm_idx][1]
                     for clk_idx in range(len(outlst_mmcm)):
                         if outlst_mmcm[clk_idx]==clk:
-                            lst_assign.append(f'''{'assign    '+clk:<40}=    bufgce_{clk}_clk_out;''')
-                            lst_assign.append(f'''{'assign    bufgce_'+clk+'_clk_in':<40}=    mmcm{str(pll_mmcm_idx)}_clk_out{str(clk_idx)};''')
-                            lst_bufgce = gen_bufgce("bufgce_"+clk)
-                            lst_bufgce_wire += lst_bufgce[0]
-                            lst_bufgce_inst += lst_bufgce[1]
+                            lst_assign.append(f'''{'assign    '+clk:<40}=    mmcm{str(pll_mmcm_idx)}_clk_out{str(clk_idx)};''')
                 elif(clk_map_mmcm[src_clk][pll_mmcm_idx][0]=="pll"):
                     outlst_pll = clk_map_mmcm[src_clk][pll_mmcm_idx][1]
                     for clk_idx in range(len(outlst_pll)):
                         if outlst_pll[clk_idx]==clk:
-                            lst_assign.append(f'''{'assign    '+clk:<40}=    bufgce_{clk}_clk_out;''')
-                            lst_assign.append(f'''{'assign    bufgce_'+clk+'_clk_in':<40}=    pll{str(pll_mmcm_idx)}_clk_out{str(clk_idx)};''')
-                            lst_bufgce = gen_bufgce("bufgce_"+clk)
-                            lst_bufgce_wire += lst_bufgce[0]
-                            lst_bufgce_inst += lst_bufgce[1]
+                            lst_assign.append(f'''{'assign    '+clk:<40}=    pll{str(pll_mmcm_idx)}_clk_out{str(clk_idx)};''')
         # rst sync gen
         lst_rst_sync = gen_rstsync(clk)
         lst_rst_sync_wire += lst_rst_sync[0]
@@ -235,12 +218,17 @@ def crg_gen(file):
         lst_rst_sync_inst += ["\n"]
         for unit_idx in range(len(clk_map_mmcm[src_clk])):
             if clk in clk_map_mmcm[src_clk][unit_idx][1]:
-                if clk_map_mmcm[src_clk][unit_idx][0]=="pll":
-                    lst_assign.append(f'''{'assign    '+clk+'_src_arst':<40}=    ~(rst_n_sys & pll{unit_idx}_locked);''')
-                else:
-                    lst_assign.append(f'''{'assign    '+clk+'_src_arst':<40}=    ~(rst_n_sys & mmcm{unit_idx}_locked);''')
+                pll_fag = 1
+                break
             else:
-                lst_assign.append(f'''{'assign    '+clk+'_src_arst':<40}=    ~rst_n_sys;''')
+                pll_fag = 0
+        if pll_fag==1:
+            if clk_map_mmcm[src_clk][unit_idx][0]=="pll":
+                lst_assign.append(f'''{'assign    '+clk+'_src_arst':<40}=    ~(rst_n_sys & pll{unit_idx}_locked);''')
+            else:
+                lst_assign.append(f'''{'assign    '+clk+'_src_arst':<40}=    ~(rst_n_sys & mmcm{unit_idx}_locked);''')
+        else:
+            lst_assign.append(f'''{'assign    '+clk+'_src_arst':<40}=    ~rst_n_sys;''')
         lst_assign.append(f'''{'assign    rst_'+clk:<40}=    {clk}_dest_arst;''')
         lst_assign.append(f'''{'assign    '+clk+'_dest_clk':<40}=    {clk};''')
 
@@ -248,8 +236,8 @@ def crg_gen(file):
             
 
 
-    lst_wire = lst_bufi_wire + ["\n"] + lst_mmcm_wire + ["\n"] + lst_pll_wire + ["\n"] +lst_bufgdiv_wire + ["\n"] +lst_bufgmux_wire + ["\n"] + lst_bufgce_wire + ["\n"] + lst_rst_sync_wire 
-    lst_inst = lst_bufi_inst + ["\n"] + lst_mmcm_inst + ["\n"] + lst_pll_inst + ["\n"] +lst_bufgdiv_inst + ["\n"] +lst_bufgmux_inst + ["\n"] + lst_bufgce_inst + ["\n"] + lst_rst_sync_inst
+    lst_wire = lst_bufi_wire + ["\n"] + lst_mmcm_wire + ["\n"] + lst_pll_wire + ["\n"] +lst_bufgdiv_wire + ["\n"] +lst_bufgmux_wire + ["\n"] + lst_rst_sync_wire 
+    lst_inst = lst_bufi_inst + ["\n"] + lst_mmcm_inst + ["\n"] + lst_pll_inst + ["\n"] +lst_bufgdiv_inst + ["\n"] +lst_bufgmux_inst + ["\n"] + lst_rst_sync_inst
     lst_wfile = lst_port + ["\n"] + lst_wire + ["\n"] + lst_inst + ["\n"] + lst_assign
 
     with open(top_module+"_crg.v", "w") as f:
@@ -257,6 +245,7 @@ def crg_gen(file):
             f.write(line)
             if(line!="\n"):
                 f.write("\n")
+        f.write("endmodule")
 
     with open(top_module+"_crg_inst.v", "w") as f:
         f.write("module "+top_module+"_crg_inst(\n")
@@ -270,4 +259,4 @@ def crg_gen(file):
             f.write("\n")        
         f.write("endmodule")
 
-    return domains, modules, fastest_clk_map
+    return 1, modules, fastest_clk_map

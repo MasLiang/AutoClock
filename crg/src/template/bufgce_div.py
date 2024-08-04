@@ -3,8 +3,6 @@ def gen_bufgce_div(module_name, div_fac):
 	lst_inst = []
 	
 	lst_wire.append("wire    "+module_name+"_o;")
-	lst_wire.append("wire    "+module_name+"_ce;")
-	lst_wire.append("wire    "+module_name+"_clr;")
 	lst_wire.append("wire    "+module_name+"_i;")
 
 	lst_inst.append("BUFGCE_DIV #(")
@@ -15,8 +13,8 @@ def gen_bufgce_div(module_name, div_fac):
 	lst_inst.append("   .SIM_DEVICE(\"ULTRASCALE_PLUS\") ")
 	lst_inst.append(")"+module_name+"(")
 	lst_inst.append("   .O                  ("+module_name+"_o),")
-	lst_inst.append("   .CE                 ("+module_name+"_ce),")
-	lst_inst.append("   .CLR                ("+module_name+"_clr),")
+	lst_inst.append("   .CE                 (1'b1),")
+	lst_inst.append("   .CLR                (1'b0),")
 	lst_inst.append("   .I                  ("+module_name+"_i));")
 
 	return [lst_wire, lst_inst]

@@ -65,6 +65,7 @@ def pll_multi_calc_fac(domains):
         else:
             num_domains = 0
             factor = pll_calc_fac(src_period, [domains[name_domains[0]]], 1)
+            out_name = [name_domains.pop(0)]
         pll_map[src_domain].append(["pll", out_name, factor])
     
     return pll_map

@@ -49,6 +49,7 @@ def crg_insert(module_name, root_path):
     new_rtl = rtl_generator.visit(top_ast)
     with open(module_name+".v", 'w') as f:
         f.write(new_rtl) 
+    os.system("mv *.v "+root_path)
 
 #crg_insert("top", "./verilog/")
 #cdc_insert("rwkv_top", {"rwkv_top": "clk_phy", "rwkv_top_read_all115": "clk1", "rwkv_top_layer_common_s": "clk2", "rwkv_top_write_all": "clk3"}, "../../../rwkv_src/verilog/")

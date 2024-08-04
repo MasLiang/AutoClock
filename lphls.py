@@ -16,10 +16,12 @@ os.system("cp "+cpp_path+" "+root_path+"dut_backup.cpp")
 
 # parser HLS to generate crg
 clk_domains, module_map, fastest_clk_map = crg_gen(cpp_path)
+#print("***module map : ", module_map)
+#print(clk_domains)
 
 #using VITIS_HLS to generate 
 os.chdir(root_path)
-os.system("vitis_hls -f run_hls.tcl")
+#os.system("vitis_hls -f run_hls.tcl")
 os.system("cp dut_backup.cpp dut.cpp")
 os.chdir("../")
 

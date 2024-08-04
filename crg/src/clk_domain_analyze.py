@@ -178,10 +178,11 @@ def pll_mmcm_cal(domains):
 def clk_resource_cal(domains):
     # clk_map is used to generate some BUFs
     # domains is used to generate PLL
-    clk_map_mux, domains =  bufgce_mux_cal(domains, 1)
-    clk_map_bypass, domains = bypass_cal(domains)
-    clk_map_div, domains =  bufgce_div_cal(domains)
-    clk_map_mmcm = pll_mmcm_cal(domains)
+    domains_copy = domains.copy()
+    clk_map_mux, domains_copy =  bufgce_mux_cal(domains_copy, 1)
+    clk_map_bypass, domains_copy = bypass_cal(domains_copy)
+    clk_map_div, domains_copy =  bufgce_div_cal(domains_copy)
+    clk_map_mmcm = pll_mmcm_cal(domains_copy)
 
-    return clk_map_mux, clk_map_bypass, clk_map_div, clk_map_mmcm, domains
+    return clk_map_mux, clk_map_bypass, clk_map_div, clk_map_mmcm
 
