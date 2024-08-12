@@ -35,6 +35,7 @@ def determain_cgen(file_path, undf_flg):
         return "" 
     
 def cg_insert_single_module(inst_name, root_path, undf_flg):
+    print(inst_name)
     file_path = root_path+"/"+inst_name+".v"
     cgen = determain_cgen(file_path, undf_flg)
 
@@ -113,6 +114,7 @@ def cg_insert_single_module(inst_name, root_path, undf_flg):
             f.write(i)
 
 def cg_insert(module_name, root_path):
+    print(root_path)
     if os.path.exists(root_path+"/"+module_name+".v"):
         _, _, _, main_module_list, _, _, other_module_list, _, _, _, _, _ = read_file(module_name, {}, root_path)
         for inst in main_module_list+other_module_list:
