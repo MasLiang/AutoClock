@@ -242,7 +242,7 @@ def gen_mmcme4_inst(module_name, factors):
         lst_inst.append("   .clk_out6   ("+module_name+"_clk_out6),")
         lst_wire.append("wire	"+module_name+"_clk_out6;")
     lst_wire.append("wire	"+module_name+"_clk_in0;")
-    lst_inst.append("   .clk_in0    ("+module_name+"_clk_in0)")
+    lst_inst.append("   .clk_in0    ("+module_name+"_clk_in0),")
     if(clkin_num>1):
         lst_wire.append("wire	"+module_name+"_clk_in1;")
         lst_inst.append("   .clk_in1    (clk_in1)")

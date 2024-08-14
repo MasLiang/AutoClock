@@ -39,7 +39,7 @@ def mmcm_single_calc_fac(in_period, out_period):
 
     return lst_factor[0]
 
-def mmcm_multi_calc_fac(domains):
+def mmcm_multi_calc_fac(domains, num_mmcm):
     # This function is used to calculate multi_mmcm factor.
 
     name_domains = list(domains.keys())
@@ -56,9 +56,9 @@ def mmcm_multi_calc_fac(domains):
         mmcm_fac = mmcm_single_calc_fac(domains[name_domains[0]], push_period_lst)
         if(mmcm_fac==[]):
             if(len(push_period_lst)==1):
-                # TODO
+                # TODO: there is a clock that can not be generate by mmcm, it needs cascade
                 # assert Error
-                return mmcm_map
+                return {}
             pop_domain_dic = {**pop_domain_dic, push_name_lst.pop():push_period_lst.pop()}
         if(len(push_name_lst)==7):
             mmcm_map[name_domains[0]].append(["mmcm", push_name_lst, mmcm_fac])
@@ -69,13 +69,13 @@ def mmcm_multi_calc_fac(domains):
         mmcm_map[name_domains[0]].append(["mmcm", push_name_lst, mmcm_fac])
     
     if(pop_domain_dic=={}):
+        if len(mmcm_map[name_domains[0]])>num_mmcm:
+            return {}
         return mmcm_map    
 
-    later_mmcm_map  = mmcm_multi_calc_fac({name_domains[0]:domains[name_domains[0]], **pop_domain_dic})
+    later_mmcm_map  = mmcm_multi_calc_fac({name_domains[0]:domains[name_domains[0]], **pop_domain_dic}, num_mmcm)
     mmcm_map[name_domains[0]] = mmcm_map[name_domains[0]]+later_mmcm_map[name_domains[0]]
 
+    if len(mmcm_map[name_domains[0]])>num_mmcm:
+        return {}
     return mmcm_map 
-
-
-#domains = {"src_clk": 10, "clk1": 5, "clk2": 3, "clk3":19}
-    

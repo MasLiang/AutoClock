@@ -68,7 +68,7 @@ if flg==1:
     crg_insert(proj_name, rtl_path)
 
 # insert clock gate
-cg_insert(proj_name, impl_rtl_path)
+cg_insert(proj_name, impl_rtl_path, 0, 280, 0, 0)
 
 # generate a tcl file 
 with open(proj_path+'/run_hls.tcl', 'w') as f:

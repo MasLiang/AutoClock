@@ -32,4 +32,4 @@ cdc_insert("top", module_map, fastest_clk_map, rtl_path)
 crg_insert("top", rtl_path)
 
 # insert clock gate
-cg_insert("top", rtl_path)
+cg_insert("top", rtl_path, 0, 280, 0, 2)

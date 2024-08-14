@@ -102,6 +102,8 @@ def cg_insert_single_module(inst_name, root_path, undf_flg):
                     parts = line.split('ap_clk')
                     new_line = parts[0] + 'ap_clk' + parts[1] + 'ap_clk_cg' +parts[2]
                     new_rtl.append(new_line)
+                elif "ACLK" in line:
+                    new_rtl.append(line)
                 else:
                     line = line.replace("ap_clk", "ap_clk_cg")
                     new_rtl.append(line)
@@ -113,33 +115,34 @@ def cg_insert_single_module(inst_name, root_path, undf_flg):
         for i in new_rtl:
             f.write(i)
 
-def cg_insert(module_name, root_path):
-    print(root_path)
+def cg_insert(module_name, root_path, cg_num, cg_max_num, cg_level, cg_max_level):
     if os.path.exists(root_path+"/"+module_name+".v"):
-        _, _, _, main_module_list, _, _, other_module_list, _, _, _, _, _ = read_file(module_name, {}, root_path)
-        for inst in main_module_list+other_module_list:
-            # Why not this file?
-            if not os.path.exists(root_path+"/"+inst.module+".v"):
-                continue
-            # read and parse this file
-            _, _, cg_module_list, main_module_list, _, _, other_module_list, _, case_always_list, _, _, _ = read_file(inst.module, {}, root_path)
-            
-            # if there is a clock gate
-            if len(cg_module_list)!=0:
-                continue
-            module_list = main_module_list + other_module_list
-            # if there are sub-modules
-            if len(module_list)!=0:
-                for sub_module in module_list:
-                    cg_insert(sub_module.module, root_path)
-            
+        _, _, cg_module_list, main_module_list, _, _, other_module_list, _, case_always_list, _, _, _ = read_file(module_name, {}, root_path)
+
+        # if there is a clock gate
+        if len(cg_module_list)==0:
             undf_flg = 0 # 1: this is a un-dataflow module with FSM
             if len(case_always_list)>0:
                 for case_always in case_always_list:
                     if case_always.statement.statements[0].comp.name=="ap_CS_fsm":
                         undf_flg = 1
                         break
-            cg_insert_single_module(inst.module, root_path, undf_flg)
-        
+            cg_insert_single_module(module_name, root_path, undf_flg)
+            cg_level += 1
+            cg_num += 1
 
+        if cg_level==cg_max_level or cg_num==cg_max_num:
+            return cg_num
+        
+        for inst in main_module_list+other_module_list:
+            # Why not this file?
+            if not os.path.exists(root_path+"/"+inst.module+".v"):
+                continue
+            # read and parse this file
+            cg_num = cg_insert(inst.module, root_path, cg_num, cg_max_num, cg_level, cg_max_level)
+            if cg_num==cg_max_num:
+                return cg_num
+
+        return cg_num
+            
 #cg_insert("top_kernel3_x0", "../../all_ab/dut/solution1/impl/verilog/")
