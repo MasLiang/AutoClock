@@ -86,4 +86,4 @@ with open(proj_path+'/run_hls.tcl', 'w') as f:
 os.chdir(proj_path)
 os.system("vitis-run --mode hls --tcl run_hls.tcl")
 os.chdir(root_path)
-os.system("cp "+proj_name+".xo "+xo_path)
+os.system("cp "+proj_path+"/"+proj_name+".xo "+root_path+"/"+xo_path)
