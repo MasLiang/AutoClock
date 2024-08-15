@@ -1,13 +1,12 @@
 from pyverilog.vparser.parser import parse as rtl_parse
+from pyverilog.ast_code_generator.codegen import ASTCodeGenerator
 import pyverilog.vparser.ast as ast
 import os
 import copy
 import re
 from .parser import *
 
-def determain_cgen(file_path, undf_flg):
-    top_module_ast, directives = rtl_parse([file_path])
-    
+def determain_cgen(top_module_ast, undf_flg):
     if undf_flg:
         # cgen = !(idle |(ap_ST_fsm_state*_blk & ap_CS_fsm_state*))
         all_wire = DFS(top_module_ast, lambda node : isinstance(node, ast.Wire))
@@ -34,90 +33,160 @@ def determain_cgen(file_path, undf_flg):
                 return "ap_idle"
         return "" 
     
-def cg_insert_single_module(inst_name, root_path, undf_flg):
-    print(inst_name)
-    file_path = root_path+"/"+inst_name+".v"
-    cgen = determain_cgen(file_path, undf_flg)
+#def cg_insert_single_module(inst_name, root_path, undf_flg, top_module):
+#    print(inst_name)
+#    file_path = root_path+"/"+inst_name+".v"
+#    cgen = determain_cgen(file_path, undf_flg)
+#
+#    if cgen=='':
+#        return
+#
+#    cg_list = []
+#    cg_list.append("\n")
+#    cg_list.append("wire        ap_clk_cg;\n")
+#    cg_list.append("wire        cgen;\n")
+#    cg_list.append("assign      cgen = "+cgen+";\n")
+#    cg_list.append("BUFGCE "+inst_name+"_bufgce(\n")
+#    cg_list.append("    .I        (ap_clk),\n")
+#    cg_list.append("    .O        (ap_clk_cg),\n")
+#    cg_list.append("    .CE       (cgen));\n")
+#    cg_list.append("\n")
+#
+#    new_rtl = []
+#    with open(file_path, 'r') as file:
+#        var_def_flg = 0
+#        insert_flg = 0
+#        control_s_axi_flg = 0
+#        for line in file:
+#            if insert_flg==0:
+#                if var_def_flg==0:
+#                    if ("wire " in line or "reg " in line) and (not( "input " in line or "output " in line)):
+#                        var_def_flg = 1
+#                else:
+#                    if not ("wire " in line or "reg " in line or line=="\n"):
+#                        new_rtl += cg_list
+#                        var_def_flg = 0
+#                        insert_flg = 1
+#                new_rtl.append(line)
+#            elif "control_s_axi_U" in line or control_s_axi_flg==1:
+#                if "control_s_axi_U" in line:
+#                    control_s_axi_flg = 1
+#                if "ACLK" in line:
+#                    control_s_axi_flg = 0 
+#                new_rtl.append(line)
+#            elif "ap_clk" in line and (not "input " in line):
+#                if "always" in line:
+#                    next_line1 = file.readline()
+#                    next_line2 = file.readline()
+#                    if "if" in next_line2:
+#                        next_line3 = file.readline()
+#                        if "ap_CS_fsm" in next_line3:
+#                            new_rtl.append(line)
+#                            new_rtl.append(next_line1)
+#                            new_rtl.append(next_line2)
+#                            new_rtl.append(next_line3)
+#                        else:
+#                            line = line.replace("ap_clk", "ap_clk_cg")
+#                            new_rtl.append(line)
+#                            new_rtl.append(next_line1)
+#                            new_rtl.append(next_line2)
+#                            new_rtl.append(next_line3)
+#                    else:
+#                        if "ap_CS_fsm" in next_line2:
+#                            new_rtl.append(line)
+#                            new_rtl.append(next_line1)
+#                            new_rtl.append(next_line2)
+#                            continue
+#                        else:
+#                            line = line.replace("ap_clk", "ap_clk_cg")
+#                            new_rtl.append(line)
+#                            new_rtl.append(next_line1)
+#                            new_rtl.append(next_line2)
+#                elif line.count("ap_clk") == 2:
+#                    # .ap_clk(ap_clk) --> .ap_clk(ap_clk_cg)
+#                    parts = line.split('ap_clk')
+#                    new_line = parts[0] + 'ap_clk' + parts[1] + 'ap_clk_cg' +parts[2]
+#                    new_rtl.append(new_line)
+#                elif "ACLK" in line:
+#                    if top_module:
+#                        line = line.replace("ap_clk", "ap_clk_cg")
+#                    new_rtl.append(line)
+#                else:
+#                    line = line.replace("ap_clk", "ap_clk_cg")
+#                    new_rtl.append(line)
+#                    
+#            else:
+#                new_rtl.append(line)
+#
+#    with open(file_path, "w") as f:
+#        for i in new_rtl:
+#            f.write(i)
 
-    if cgen=='':
-        return
+def cg_insert_single_module(module_name, top_module_ast, top_module):
 
-    cg_list = []
-    cg_list.append("\n")
-    cg_list.append("wire        ap_clk_cg;\n")
-    cg_list.append("wire        cgen;\n")
-    cg_list.append("assign      cgen = "+cgen+";\n")
-    cg_list.append("BUFGCE "+inst_name+"_bufgce(\n")
-    cg_list.append("    .I        (ap_clk),\n")
-    cg_list.append("    .O        (ap_clk_cg),\n")
-    cg_list.append("    .CE       (cgen));\n")
-    cg_list.append("\n")
-
-    new_rtl = []
-    with open(file_path, 'r') as file:
-        var_def_flg = 0
-        insert_flg = 0
-        for line in file:
-            if insert_flg==0:
-                if var_def_flg==0:
-                    if ("wire " in line or "reg " in line) and (not( "input " in line or "output " in line)):
-                        var_def_flg = 1
-                else:
-                    if not ("wire " in line or "reg " in line or line=="\n"):
-                        new_rtl += cg_list
-                        var_def_flg = 0
-                        insert_flg = 1
-                new_rtl.append(line)
-
-            elif "ap_clk" in line and (not "input " in line):
-                if "always" in line:
-                    next_line1 = file.readline()
-                    next_line2 = file.readline()
-                    if "if" in next_line2:
-                        next_line3 = file.readline()
-                        if "ap_CS_fsm" in next_line3:
-                            new_rtl.append(line)
-                            new_rtl.append(next_line1)
-                            new_rtl.append(next_line2)
-                            new_rtl.append(next_line3)
-                        else:
-                            line = line.replace("ap_clk", "ap_clk_cg")
-                            new_rtl.append(line)
-                            new_rtl.append(next_line1)
-                            new_rtl.append(next_line2)
-                            new_rtl.append(next_line3)
-                    else:
-                        if "ap_CS_fsm" in next_line2:
-                            new_rtl.append(line)
-                            new_rtl.append(next_line1)
-                            new_rtl.append(next_line2)
-                            continue
-                        else:
-                            line = line.replace("ap_clk", "ap_clk_cg")
-                            new_rtl.append(line)
-                            new_rtl.append(next_line1)
-                            new_rtl.append(next_line2)
-                elif line.count("ap_clk") == 2:
-                    # .ap_clk(ap_clk) --> .ap_clk(ap_clk_cg)
-                    parts = line.split('ap_clk')
-                    new_line = parts[0] + 'ap_clk' + parts[1] + 'ap_clk_cg' +parts[2]
-                    new_rtl.append(new_line)
-                elif "ACLK" in line:
-                    new_rtl.append(line)
-                else:
-                    line = line.replace("ap_clk", "ap_clk_cg")
-                    new_rtl.append(line)
-                    
+    all_always = DFS(top_module_ast, lambda node : isinstance(node, ast.Always))
+    all_inst = DFS(top_module_ast, lambda node : isinstance(node, ast.Instance))
+    all_decl = DFS(top_module_ast, lambda node : isinstance(node, ast.Decl))
+    all_assign = DFS(top_module_ast, lambda node:isinstance(node, ast.Assign))
+    for always in all_always:
+        if isinstance(always.statement.statements[0], ast.IfStatement):
+            var = always.statement.statements[0].true_statement.statements[0].left.var.name
+            # bind to the fastest clock
+            if var=="ap_CS_fsm":
+                continue
             else:
-                new_rtl.append(line)
+                if always.sens_list.list[0].sig=="ap_clk":
+                    always.sens_list.list[0].sig = "ap_clk_cg"
+        
+    for inst in all_inst:
+        if "control_s_axi" in inst.module:
+            continue
+        elif "m_axi" in inst.module:
+            if not top_module:
+                continue
+            for portarg in inst.portlist:
+                if portarg.portname=="ACLK":
+                    portarg.argname.name = "ap_clk_cg"
+        elif "crg" in inst.module:
+            for portarg in inst.portlist:
+                if portarg.argname.name=="ap_clk":
+                    portarg.argname.name = "ap_clk_cg"
+        else:
+            for portarg in inst.portlist:
+                if isinstance(portarg.argname, ast.Identifier):
+                    if portarg.argname.name=="ap_clk":
+                        portarg.argname.name = "ap_clk_cg"
 
-    with open(file_path, "w") as f:
-        for i in new_rtl:
+    cgen = determain_cgen(top_module_ast, 1)
+    cg_inst_gen(module_name, cgen)
+    cg_ast, _ = rtl_parse(["./"+module_name+"_inst.v"])
+    cg_wire = DFS(cg_ast, lambda node:isinstance(node, ast.Decl))
+    cg_inst = DFS(cg_ast, lambda node:isinstance(node, ast.Instance))
+    cg_assign = DFS(cg_ast, lambda node:isinstance(node, ast.Assign))
+    all_decl = tuple(list(all_decl)+list(cg_wire))
+    all_inst = tuple(list(all_inst)+list(cg_inst))
+    all_assign = tuple(list(all_assign)+list(cg_assign))
+
+def cg_inst_gen(inst_name, cgen):
+    cg_list = []
+    cg_list.append("module clk_gate(")
+    cg_list.append("    input clk);")
+    cg_list.append("wire        ap_clk_cg;")
+    cg_list.append("wire        cgen;")
+    cg_list.append("assign      cgen = "+cgen+";\n")
+    cg_list.append("BUFGCE "+inst_name+"_bufgce(")
+    cg_list.append("    .I        (ap_clk),")
+    cg_list.append("    .O        (ap_clk_cg),")
+    cg_list.append("    .CE       (cgen));")
+    cg_list.append("endmodule")
+    with open(inst_name+"_inst.v", "w") as f:
+        for i in cg_list:
             f.write(i)
+            f.write("\n")
 
-def cg_insert(module_name, root_path, cg_num, cg_max_num, cg_level, cg_max_level):
+def cg_insert(module_name, root_path, cg_num, cg_max_num, cg_level, cg_max_level, top_module=1):
     if os.path.exists(root_path+"/"+module_name+".v"):
-        _, _, cg_module_list, main_module_list, _, _, other_module_list, _, case_always_list, _, _, _ = read_file(module_name, {}, root_path)
+        top_module_ast, _, cg_module_list, main_module_list, _, _, other_module_list, _, case_always_list, _, _, _ = read_file(module_name, {}, root_path)
 
         # if there is a clock gate
         if len(cg_module_list)==0:
@@ -127,7 +196,8 @@ def cg_insert(module_name, root_path, cg_num, cg_max_num, cg_level, cg_max_level
                     if case_always.statement.statements[0].comp.name=="ap_CS_fsm":
                         undf_flg = 1
                         break
-            cg_insert_single_module(module_name, root_path, undf_flg)
+            #cg_insert_single_module(module_name, root_path, undf_flg, top_module)
+            cg_insert_single_module(module_name, top_module_ast, top_module)
             cg_level += 1
             cg_num += 1
 
@@ -139,9 +209,14 @@ def cg_insert(module_name, root_path, cg_num, cg_max_num, cg_level, cg_max_level
             if not os.path.exists(root_path+"/"+inst.module+".v"):
                 continue
             # read and parse this file
-            cg_num = cg_insert(inst.module, root_path, cg_num, cg_max_num, cg_level, cg_max_level)
+            cg_num = cg_insert(inst.module, root_path, cg_num, cg_max_num, cg_level, cg_max_level, top_module=0)
             if cg_num==cg_max_num:
                 return cg_num
+
+        rtl_generator = ASTCodeGenerator()
+        new_rtl = rtl_generator.visit(top_module_ast)
+        with open(root_path+"/"+module_name+".v",'w') as f:
+            f.write(new_rtl)
 
         return cg_num
             
