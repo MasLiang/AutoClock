@@ -40,14 +40,14 @@ def crg_gen(file):
     lst_bufi_inst.append("(    .O    ("+src_clk+"_ibuf),")
     lst_bufi_inst.append("     .I    ("+src_clk+"));")
 
-    print("clk_map_mux" , clk_map_mux)
-    print("clk_map_bypass" , clk_map_bypass)
-    print("clk_map_div" , clk_map_div)
-    print("clk_map_mmcm" , clk_map_mmcm)
-    print("sel_if:", domains_sel_if)
-    print("module:", modules)
-    print("domains:", domains)
-    
+    #print("clk_map_mux" , clk_map_mux)
+    #print("clk_map_bypass" , clk_map_bypass)
+    #print("clk_map_div" , clk_map_div)
+    #print("clk_map_mmcm" , clk_map_mmcm)
+    #print("sel_if:", domains_sel_if)
+    #print("module:", modules)
+    #print("domains:", domains)
+    #
     # generate mmcm or pll to generate clks in domains
     for unit_idx in range(len(clk_map_mmcm[src_clk])):
         unit = clk_map_mmcm[src_clk][unit_idx]

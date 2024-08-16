@@ -181,8 +181,6 @@ def cg_insert_single_module(module_name, top_module_ast, top_module, root_path):
             break
 
     top_def.items = tuple(top_items_list[:top_decl_idx]+cg_items_list[:cg_decl_idx]+top_items_list[top_decl_idx:]+cg_items_list[cg_decl_idx:])
-    print(top_def.items)
-    print(cg_def.items)
 
     rtl_generator = ASTCodeGenerator()
     new_rtl = rtl_generator.visit(top_module_ast)
