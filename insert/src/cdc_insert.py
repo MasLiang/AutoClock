@@ -811,9 +811,9 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
             var = always.statement.statements[0].true_statement.statements[0].left.var.name
             # bind to the fastest clock
             if (var=="ap_CS_fsm") or (var=="ap_done_reg") or (var in mdfy_always):
-                #always.sens_list.list[0].sig.name = fastest_clk
+                always.sens_list.list[0].sig.name = fastest_clk
                 # TODO: is there a bug?
-                always.sens_list.list[0].sig = fastest_clk
+                #always.sens_list.list[0].sig = fastest_clk
                 always.statement.statements[0].cond.left.name = "rst_"+fastest_clk
             # remove those unused always for async
             elif var in rm_sig:
@@ -834,9 +834,9 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
                 _, _, module = connect_to_module(var.replace("_reg",""), main_module_list)
                 out_clk = module_map[module.module]
                 if in_clk==out_clk:
-                    #always.sens_list.list[0].sig.name = in_clk
+                    always.sens_list.list[0].sig.name = in_clk
                     # TODO: is there a bug?
-                    always.sens_list.list[0].sig = in_clk
+                    #always.sens_list.list[0].sig = in_clk
                     always.statement.statements[0].cond.left.name = "rst_"+in_clk
                     continue
                 gen_async_level_inst("async_inst_"+in_sig, in_sig, in_clk, out_sig, out_clk)
@@ -864,8 +864,8 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
                                   ast.Rvalue(ast.Eq(ast.Lvalue(ast.Identifier(var.replace("start_reg", "done"))), 
                                                     ast.Rvalue(ast.Identifier("1'b0")))))
                 always.statement.statements[0].false_statement.statements[0].cond = eq_sync
-                #always.sens_list.list[0].sig.name = out_clk
-                always.sens_list.list[0].sig = out_clk
+                always.sens_list.list[0].sig.name = out_clk
+                #always.sens_list.list[0].sig = out_clk
                 always.statement.statements[0].cond.left.name = "rst_"+out_clk
 
     for case_item in case_always_list[0].statement.statements[0].caselist:

@@ -122,21 +122,21 @@ def determain_cgen(top_module_ast, undf_flg):
 #        for i in new_rtl:
 #            f.write(i)
 
-def cg_insert_single_module(module_name, top_module_ast, top_module):
+def cg_insert_single_module(module_name, top_module_ast, top_module, root_path):
 
     all_always = DFS(top_module_ast, lambda node : isinstance(node, ast.Always))
     all_inst = DFS(top_module_ast, lambda node : isinstance(node, ast.Instance))
-    all_decl = DFS(top_module_ast, lambda node : isinstance(node, ast.Decl))
-    all_assign = DFS(top_module_ast, lambda node:isinstance(node, ast.Assign))
+
     for always in all_always:
         if isinstance(always.statement.statements[0], ast.IfStatement):
-            var = always.statement.statements[0].true_statement.statements[0].left.var.name
-            # bind to the fastest clock
-            if var=="ap_CS_fsm":
-                continue
-            else:
-                if always.sens_list.list[0].sig=="ap_clk":
-                    always.sens_list.list[0].sig = "ap_clk_cg"
+            if isinstance(always.statement.statements[0].true_statement.statements[0], ast.NonblockingSubstitution):
+                var = always.statement.statements[0].true_statement.statements[0].left.var.name
+                # bind to the fastest clock
+                if var=="ap_CS_fsm":
+                    continue
+                elif always.sens_list.list[0].type=="posedge":
+                    if always.sens_list.list[0].sig.name=="ap_clk":
+                        always.sens_list.list[0].sig.name = "ap_clk_cg"
         
     for inst in all_inst:
         if "control_s_axi" in inst.module:
@@ -157,15 +157,37 @@ def cg_insert_single_module(module_name, top_module_ast, top_module):
                     if portarg.argname.name=="ap_clk":
                         portarg.argname.name = "ap_clk_cg"
 
+    top_module_defs = DFS(top_module_ast, lambda node : isinstance(node, ast.ModuleDef))
+    for top_def in top_module_defs:
+        break
     cgen = determain_cgen(top_module_ast, 1)
     cg_inst_gen(module_name, cgen)
     cg_ast, _ = rtl_parse(["./"+module_name+"_inst.v"])
-    cg_wire = DFS(cg_ast, lambda node:isinstance(node, ast.Decl))
-    cg_inst = DFS(cg_ast, lambda node:isinstance(node, ast.Instance))
-    cg_assign = DFS(cg_ast, lambda node:isinstance(node, ast.Assign))
-    all_decl = tuple(list(all_decl)+list(cg_wire))
-    all_inst = tuple(list(all_inst)+list(cg_inst))
-    all_assign = tuple(list(all_assign)+list(cg_assign))
+    os.system("rm "+module_name+"_inst.v")
+    cg_module_defs = DFS(cg_ast, lambda node : isinstance(node, ast.ModuleDef))
+    for cg_def in cg_module_defs:
+        break
+    top_items_list = list(top_def.items)
+    cg_items_list = list(cg_def.items)
+    top_decl_idx = 0
+    cg_decl_idx = 0
+    for item_idx in range(len(top_items_list)):
+        if isinstance(top_items_list[item_idx], ast.Decl):
+            top_decl_idx = item_idx
+            break
+    for item_idx in range(len(cg_items_list)):
+        if not isinstance(cg_items_list[item_idx], ast.Decl):
+            cg_decl_idx = item_idx
+            break
+
+    top_def.items = tuple(top_items_list[:top_decl_idx]+cg_items_list[:cg_decl_idx]+top_items_list[top_decl_idx:]+cg_items_list[cg_decl_idx:])
+    print(top_def.items)
+    print(cg_def.items)
+
+    rtl_generator = ASTCodeGenerator()
+    new_rtl = rtl_generator.visit(top_module_ast)
+    with open(root_path+"/"+module_name+".v",'w') as f:
+        f.write(new_rtl)
 
 def cg_inst_gen(inst_name, cgen):
     cg_list = []
@@ -188,18 +210,18 @@ def cg_insert(module_name, root_path, cg_num, cg_max_num, cg_level, cg_max_level
     if os.path.exists(root_path+"/"+module_name+".v"):
         top_module_ast, _, cg_module_list, main_module_list, _, _, other_module_list, _, case_always_list, _, _, _ = read_file(module_name, {}, root_path)
 
-        # if there is a clock gate
+        # if there is not a clock gate
         if len(cg_module_list)==0:
             undf_flg = 0 # 1: this is a un-dataflow module with FSM
             if len(case_always_list)>0:
                 for case_always in case_always_list:
                     if case_always.statement.statements[0].comp.name=="ap_CS_fsm":
                         undf_flg = 1
+                        #cg_insert_single_module(module_name, root_path, undf_flg, top_module)
+                        cg_insert_single_module(module_name, top_module_ast, top_module, root_path)
+                        cg_num += 1
                         break
-            #cg_insert_single_module(module_name, root_path, undf_flg, top_module)
-            cg_insert_single_module(module_name, top_module_ast, top_module)
-            cg_level += 1
-            cg_num += 1
+        cg_level += 1
 
         if cg_level==cg_max_level or cg_num==cg_max_num:
             return cg_num
@@ -213,10 +235,6 @@ def cg_insert(module_name, root_path, cg_num, cg_max_num, cg_level, cg_max_level
             if cg_num==cg_max_num:
                 return cg_num
 
-        rtl_generator = ASTCodeGenerator()
-        new_rtl = rtl_generator.visit(top_module_ast)
-        with open(root_path+"/"+module_name+".v",'w') as f:
-            f.write(new_rtl)
 
         return cg_num
             
