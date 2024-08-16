@@ -130,13 +130,14 @@ def cg_insert_single_module(module_name, top_module_ast, top_module, root_path):
     for always in all_always:
         if isinstance(always.statement.statements[0], ast.IfStatement):
             if isinstance(always.statement.statements[0].true_statement.statements[0], ast.NonblockingSubstitution):
-                var = always.statement.statements[0].true_statement.statements[0].left.var.name
-                # bind to the fastest clock
-                if var=="ap_CS_fsm":
-                    continue
-                elif always.sens_list.list[0].type=="posedge":
-                    if always.sens_list.list[0].sig.name=="ap_clk":
-                        always.sens_list.list[0].sig.name = "ap_clk_cg"
+                if isinstance(always.statement.statements[0].true_statement.statements[0].left.var, ast.Identifier):
+                    var = always.statement.statements[0].true_statement.statements[0].left.var.name
+                    # bind to the fastest clock
+                    if var=="ap_CS_fsm":
+                        continue
+                    elif always.sens_list.list[0].type=="posedge":
+                        if always.sens_list.list[0].sig.name=="ap_clk":
+                            always.sens_list.list[0].sig.name = "ap_clk_cg"
         
     for inst in all_inst:
         if "control_s_axi" in inst.module:
