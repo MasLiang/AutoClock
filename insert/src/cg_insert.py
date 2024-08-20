@@ -11,7 +11,6 @@ def determain_cgen(top_module_ast, undf_flg):
         # cgen = !(idle |(ap_ST_fsm_state*_blk & ap_CS_fsm_state*))
         all_wire = DFS(top_module_ast, lambda node : isinstance(node, ast.Wire))
         all_reg = DFS(top_module_ast, lambda node : isinstance(node, ast.Reg))
-        cgen_n = "ap_idle"
         state_idx_list = []
         block_state_pattern = r'ap_ST_fsm_state(\d+)_blk'
         for reg in all_reg:
@@ -19,10 +18,12 @@ def determain_cgen(top_module_ast, undf_flg):
             if match:
                 state_idx_list.append(match.group(1))
 
-        cgen_n_or = ""
+        cgen_n = ""
         if len(state_idx_list)>0:
             for state_idx in state_idx_list:
-                cgen_n_or = cgen_n_or+" | (ap_ST_fsm_state"+str(state_idx)+"_blk & ap_CS_fsm_state"+str(state_idx)+")"
+                if cgen_n=="":
+                    cgen_n = "(ap_ST_fsm_state"+str(state_idx)+"_blk & ap_CS_fsm_state"+str(state_idx)+")"
+                cgen_n = cgen_n+" | (ap_ST_fsm_state"+str(state_idx)+"_blk & ap_CS_fsm_state"+str(state_idx)+")"
             
         cgen = "!("+cgen_n+cgen_n_or+")"
         return cgen
