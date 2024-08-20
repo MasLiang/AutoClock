@@ -25,7 +25,7 @@ def determain_cgen(top_module_ast, undf_flg):
                     cgen_n = "(ap_ST_fsm_state"+str(state_idx)+"_blk & ap_CS_fsm_state"+str(state_idx)+")"
                 cgen_n = cgen_n+" | (ap_ST_fsm_state"+str(state_idx)+"_blk & ap_CS_fsm_state"+str(state_idx)+")"
             
-        cgen = "!("+cgen_n+cgen_n_or+")"
+        cgen = "!("cgen_n")"
         return cgen
     else:
         all_output = DFS(top_module_ast, lambda node : isinstance(node, ast.Output))
