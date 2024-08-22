@@ -6,7 +6,7 @@ from cdc.src.template.async_dpram import *
 from cdc.src.template.async_fifo import *
 from cdc.src.template.async_pulse import *
 from cdc.src.template.async_level import *
-from .parser import *
+from .rtl_parser import *
 import pyverilog.vparser.ast as ast
 import os
 import copy

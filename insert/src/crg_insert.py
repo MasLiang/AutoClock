@@ -1,6 +1,6 @@
 from pyverilog.vparser.parser import parse as rtl_parse
 from pyverilog.ast_code_generator.codegen import ASTCodeGenerator
-from .parser import *
+from .rtl_parser import *
 import pyverilog.vparser.ast as ast
 import os
 

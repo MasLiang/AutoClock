@@ -4,7 +4,7 @@ import pyverilog.vparser.ast as ast
 import os
 import copy
 import re
-from .parser import *
+from .rtl_parser import *
 
 def determain_cgen(top_module_ast, undf_flg):
     if undf_flg:
@@ -13,19 +13,28 @@ def determain_cgen(top_module_ast, undf_flg):
         all_reg = DFS(top_module_ast, lambda node : isinstance(node, ast.Reg))
         state_idx_list = []
         block_state_pattern = r'ap_ST_fsm_state(\d+)_blk'
+        idle_pattern = r'ap_idle'
+        ap_idle_flg = 0
         for reg in all_reg:
             match = re.search(block_state_pattern, reg.name)
             if match:
                 state_idx_list.append(match.group(1))
+            match = re.search(idle_pattern, reg.name)
+            if match:
+                ap_idle_flg = 1
 
         cgen_n = ""
         if len(state_idx_list)>0:
             for state_idx in state_idx_list:
                 if cgen_n=="":
                     cgen_n = "(ap_ST_fsm_state"+str(state_idx)+"_blk & ap_CS_fsm_state"+str(state_idx)+")"
-                cgen_n = cgen_n+" | (ap_ST_fsm_state"+str(state_idx)+"_blk & ap_CS_fsm_state"+str(state_idx)+")"
+                else:
+                    cgen_n = cgen_n+" | (ap_ST_fsm_state"+str(state_idx)+"_blk & ap_CS_fsm_state"+str(state_idx)+")"
             
-        cgen = "!("cgen_n")"
+        if ap_idle_flg:
+            cgen = "!("+cgen_n+" | ap_idle)"
+        else
+            cgen = "!("+cgen_n+")"
         return cgen
     else:
         all_output = DFS(top_module_ast, lambda node : isinstance(node, ast.Output))
@@ -141,14 +150,12 @@ def cg_insert_single_module(module_name, top_module_ast, top_module, root_path):
                             always.sens_list.list[0].sig.name = "ap_clk_cg"
         
     for inst in all_inst:
-        if "control_s_axi" in inst.module:
+        if is_main_axi_module(inst):
+            continue
+        elif "control_s_axi" in inst.module:
             continue
         elif "m_axi" in inst.module:
-            if not top_module:
-                continue
-            for portarg in inst.portlist:
-                if portarg.portname=="ACLK":
-                    portarg.argname.name = "ap_clk_cg"
+            continue
         elif "crg" in inst.module:
             for portarg in inst.portlist:
                 if portarg.argname.name=="ap_clk":
@@ -196,6 +203,7 @@ def cg_inst_gen(inst_name, cgen):
     cg_list.append("wire        ap_clk_cg;")
     cg_list.append("wire        cgen;")
     cg_list.append("assign      cgen = "+cgen+";\n")
+    cg_list.append("(* dont_touch = \"yes\" *)")
     cg_list.append("BUFGCE "+inst_name+"_bufgce(")
     cg_list.append("    .I        (ap_clk),")
     cg_list.append("    .O        (ap_clk_cg),")
