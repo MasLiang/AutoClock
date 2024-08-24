@@ -48,7 +48,8 @@ solution_name = args.solution_name
 xo_path = args.xo_path
 
 cpp_path = root_path+"kernel/"
-impl_rtl_path = proj_path+"/"+proj_name+"/"+solution_name+"/impl/verilog/"
+syn_rtl_path = proj_path+"/"+proj_name+"/"+solution_name+"/syn/verilog/"
+rpt_root_path = proj_path+"/"+proj_name+"/"+solution_name+"/syn/report/"
 
 # backup dut.cpp since after parser, it will be changed so that
 # VITIS_HLS can read it. After VITIS_HLS read it, it should be restored
@@ -58,7 +59,7 @@ os.system("cp "+cpp_path+cpp_top_name+"_backup.cpp "+cpp_path+cpp_top_name+".cpp
 flg, module_map, fastest_clk_map = crg_gen(cpp_path+cpp_top_name+".cpp")
 
 # temp delete "synthesis translate_off"
-temp_deal(impl_rtl_path+proj_name+".v")
+temp_deal(syn_rtl_path+proj_name+".v")
 
 # insert cdc circuit and do some modification
 if flg==1:
@@ -68,7 +69,7 @@ if flg==1:
     crg_insert(proj_name, rtl_path)
 
 # insert clock gate
-cg_insert(proj_name, impl_rtl_path, 0, 280, 0, 0)
+cg_insert(proj_name, syn_rtl_path, rpt_root_path, 20, 0)
 
 # generate a tcl file 
 with open(proj_path+'/run_hls.tcl', 'w') as f:
@@ -76,7 +77,7 @@ with open(proj_path+'/run_hls.tcl', 'w') as f:
     f.write("\n")
     f.write("open_solution "+solution_name)
     f.write("\n")
-    f.write("export_design -rtl verilog -format xo -flow impl -output "+proj_name+".xo")
+    f.write("export_design -rtl verilog -format xo -output "+proj_name+".xo")
     f.write("\n")
     f.write("exit")
     f.write("\n")
