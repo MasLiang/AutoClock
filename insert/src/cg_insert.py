@@ -33,9 +33,11 @@ def determain_cgen(top_module_ast, undf_flg):
                     cgen_n = cgen_n+" | (ap_ST_fsm_state"+str(state_idx)+"_blk & ap_CS_fsm_state"+str(state_idx)+")"
             
         if ap_idle_flg:
-            cgen = "!("+cgen_n+" | ap_idle)"
+            #cgen = "!("+cgen_n+" | ap_idle)"
+            cgen = "!ap_idle"
         else:
-            cgen = "!("+cgen_n+")"
+            #cgen = "!("+cgen_n+")"
+            cgen = ""
         return cgen
     else:
         all_output = DFS(top_module_ast, lambda node : isinstance(node, ast.Output))
@@ -45,6 +47,9 @@ def determain_cgen(top_module_ast, undf_flg):
         return "" 
     
 def cg_insert_single_module(module_name, top_module_ast, top_module, root_path):
+    cgen = determain_cgen(top_module_ast, 1)
+    if cgen=="":
+        return 0
 
     all_always = DFS(top_module_ast, lambda node : isinstance(node, ast.Always))
     all_inst = DFS(top_module_ast, lambda node : isinstance(node, ast.Instance))
@@ -81,7 +86,6 @@ def cg_insert_single_module(module_name, top_module_ast, top_module, root_path):
     top_module_defs = DFS(top_module_ast, lambda node : isinstance(node, ast.ModuleDef))
     for top_def in top_module_defs:
         break
-    cgen = determain_cgen(top_module_ast, 1)
     cg_inst_gen(module_name, cgen)
     cg_ast, _ = rtl_parse(["./"+module_name+"_inst.v"])
     os.system("rm "+module_name+"_inst.v")
@@ -108,6 +112,7 @@ def cg_insert_single_module(module_name, top_module_ast, top_module, root_path):
     print(root_path+"/"+module_name+".v")
     with open(root_path+"/"+module_name+".v",'w') as f:
         f.write(new_rtl)
+    return 1
 
 def cg_inst_gen(inst_name, cgen):
     cg_list = []
@@ -212,8 +217,8 @@ def cg_insert(module_name, root_path, rpt_root_path, cg_max_num, cg_max_level, t
                 if len(case_always_list)>0:
                     for case_always in case_always_list:
                         if case_always.statement.statements[0].comp.name=="ap_CS_fsm":
-                            cg_insert_single_module(curr_module[0], top_module_ast, top_module, root_path)
-                            cg_num += 1
+                            cg_insert_result = cg_insert_single_module(curr_module[0], top_module_ast, top_module, root_path)
+                            cg_num += cg_insert_result
                             break
             
             if cg_num==cg_max_num:
