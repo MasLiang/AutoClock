@@ -58,11 +58,16 @@ gate_level = args.gate_level
 gate_enable = args.gate_enable
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 cpp_path = root_path+"kernel/"
 =======
 if cpp_path=="0":
     cpp_path = root_path+"kernel/"
 >>>>>>> 5a7057a (release vision 0.9)
+=======
+if cpp_path=="0":
+    cpp_path = root_path+"kernel/"
+>>>>>>> d0a572f (release v0.9)
 syn_rtl_path = proj_path+"/"+proj_name+"/"+solution_name+"/syn/verilog/"
 rpt_root_path = proj_path+"/"+proj_name+"/"+solution_name+"/syn/report/"
 
@@ -85,14 +90,20 @@ if flg==1:
 
 # insert clock gate
 <<<<<<< HEAD
+<<<<<<< HEAD
 cg_insert(proj_name, syn_rtl_path, rpt_root_path, 20, 0)
 =======
+=======
+>>>>>>> d0a572f (release v0.9)
 if gate_enable=="true":
     if rdm:
         cg_insert_random(syn_rtl_path, gate_num, "top")
     else:
         cg_insert(proj_name, syn_rtl_path, rpt_root_path, gate_num, gate_level)
+<<<<<<< HEAD
 >>>>>>> 5a7057a (release vision 0.9)
+=======
+>>>>>>> d0a572f (release v0.9)
 
 # generate a tcl file 
 with open(proj_path+'/run_hls.tcl', 'w') as f:
@@ -101,10 +112,14 @@ with open(proj_path+'/run_hls.tcl', 'w') as f:
     f.write("open_solution "+solution_name)
     f.write("\n")
 <<<<<<< HEAD
+<<<<<<< HEAD
     f.write("export_design -rtl verilog -format xo -output "+proj_name+".xo")
 =======
     f.write("add_files "+syn_rtl_path+"/top_crg.v")
 >>>>>>> 5a7057a (release vision 0.9)
+=======
+    f.write("add_files "+syn_rtl_path+"/top_crg.v")
+>>>>>>> d0a572f (release v0.9)
     f.write("\n")
     f.write("export_design -rtl verilog -format xo -output "+proj_name+".xo")
     f.write("\n")

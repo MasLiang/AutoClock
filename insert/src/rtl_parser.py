@@ -122,6 +122,7 @@ def read_file(module_name, module_map, root_path):
     all_always = DFS(top_module_ast, lambda node : isinstance(node, ast.Always))
     all_assign = DFS(top_module_ast, lambda node : isinstance(node, ast.Assign))
 <<<<<<< HEAD
+<<<<<<< HEAD
     for inst in all_instances:
         if "s_axi" in inst.module or "m_axi" in inst.module:
             axi_module_list.append(inst)
@@ -129,6 +130,8 @@ def read_file(module_name, module_map, root_path):
             cg_module_list.append(inst)
         elif inst.module in list(module_map.keys()):
 =======
+=======
+>>>>>>> d0a572f (release v0.9)
     print(module_map)
     for inst in all_instances:
         print(inst.module)
@@ -138,7 +141,10 @@ def read_file(module_name, module_map, root_path):
             cg_module_list.append(inst)
         elif inst.module in list(module_map.keys()):
             print("true")
+<<<<<<< HEAD
 >>>>>>> 5a7057a (release vision 0.9)
+=======
+>>>>>>> d0a572f (release v0.9)
             main_module_list.append(inst)
         elif is_fifo_inst(inst):
             fifo_module_list.append(inst)

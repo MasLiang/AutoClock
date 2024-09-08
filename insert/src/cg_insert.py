@@ -5,10 +5,14 @@ import os
 import copy
 import re
 <<<<<<< HEAD
+<<<<<<< HEAD
 import pdb
 =======
 import random
 >>>>>>> 5a7057a (release vision 0.9)
+=======
+import random
+>>>>>>> d0a572f (release v0.9)
 from .rtl_parser import *
 
 def determain_cgen(top_module_ast, undf_flg, top_flg):
@@ -43,10 +47,13 @@ def determain_cgen(top_module_ast, undf_flg, top_flg):
                     cgen_n = cgen_n+" | (ap_ST_fsm_state"+str(state_idx)+"_blk & ap_CS_fsm_state"+str(state_idx)+")"
             
 <<<<<<< HEAD
+<<<<<<< HEAD
         if ap_idle_flg:
             #cgen = "!("+cgen_n+" | ap_idle)"
             cgen = "!ap_idle"
 =======
+=======
+>>>>>>> d0a572f (release v0.9)
         if ap_idle_flg: 
             if top_flg:
                 if ap_done_flg:
@@ -58,7 +65,10 @@ def determain_cgen(top_module_ast, undf_flg, top_flg):
                     cgen = "!ap_idle | ap_rst | ap_done"
                 else:
                     cgen = "!ap_idle | ap_rst"
+<<<<<<< HEAD
 >>>>>>> 5a7057a (release vision 0.9)
+=======
+>>>>>>> d0a572f (release v0.9)
         else:
             #cgen = "!("+cgen_n+")"
             cgen = ""
@@ -105,12 +115,17 @@ def determain_cgen(top_module_ast, undf_flg, top_flg):
         return "" 
     
 <<<<<<< HEAD
+<<<<<<< HEAD
 def cg_insert_single_module(module_name, top_module_ast, top_module, root_path):
     cgen = determain_cgen(top_module_ast, 1)
 =======
 def cg_insert_single_module(module_name, top_module_ast, root_path, undf_flg, top_flg):
     cgen = determain_cgen(top_module_ast, undf_flg, top_flg)
 >>>>>>> 5a7057a (release vision 0.9)
+=======
+def cg_insert_single_module(module_name, top_module_ast, root_path, undf_flg, top_flg):
+    cgen = determain_cgen(top_module_ast, undf_flg, top_flg)
+>>>>>>> d0a572f (release v0.9)
     if cgen=="":
         return 0
 
@@ -220,13 +235,19 @@ def rpt_parser(module_name, rpt_root_path, pre_latency):
                 latency_line_idx = line_idx + 3
                 latency_line = lines[latency_line_idx].replace(" ", "").split("|")
 <<<<<<< HEAD
+<<<<<<< HEAD
                 latency = int(latency_line[1])
 =======
+=======
+>>>>>>> d0a572f (release v0.9)
                 if latency_line[1]=="?":
                     latency = 1
                 else:
                     latency = int(latency_line[1])
+<<<<<<< HEAD
 >>>>>>> 5a7057a (release vision 0.9)
+=======
+>>>>>>> d0a572f (release v0.9)
         elif not resource_type_flg:
             match = re.match(resource_head_pattern, lines[line_idx])
             if match:
@@ -251,10 +272,14 @@ def rpt_parser(module_name, rpt_root_path, pre_latency):
     return latency, power_saved
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 def cg_insert(module_name, root_path, rpt_root_path, cg_max_num, cg_max_level, top_module=1):
 =======
 def cg_insert(module_name, root_path, rpt_root_path, cg_max_num, cg_max_level):
 >>>>>>> 5a7057a (release vision 0.9)
+=======
+def cg_insert(module_name, root_path, rpt_root_path, cg_max_num, cg_max_level):
+>>>>>>> d0a572f (release v0.9)
 
     module_list = [[], []]
     pi_flg = 0
@@ -267,6 +292,7 @@ def cg_insert(module_name, root_path, rpt_root_path, cg_max_num, cg_max_level):
     # name, latency, power_saved
     module_list[pi_flg].append([module_name, tmp_latency, tmp_power_saved])
 <<<<<<< HEAD
+<<<<<<< HEAD
 
     while 1:
         pdb.set_trace()
@@ -275,6 +301,11 @@ def cg_insert(module_name, root_path, rpt_root_path, cg_max_num, cg_max_level):
 
     while 1:
 >>>>>>> 5a7057a (release vision 0.9)
+=======
+    top_flg = 1
+
+    while 1:
+>>>>>>> d0a572f (release v0.9)
         curr_module_list = module_list[pi_flg]
         nxt_module_list = module_list[po_flg]
         print(curr_module_list)
@@ -300,10 +331,13 @@ def cg_insert(module_name, root_path, rpt_root_path, cg_max_num, cg_max_level):
                     for case_always in case_always_list:
                         if case_always.statement.statements[0].comp.name=="ap_CS_fsm":
 <<<<<<< HEAD
+<<<<<<< HEAD
                             cg_insert_result = cg_insert_single_module(curr_module[0], top_module_ast, top_module, root_path)
                             cg_num += cg_insert_result
                             break
 =======
+=======
+>>>>>>> d0a572f (release v0.9)
                             cg_insert_result = cg_insert_single_module(curr_module[0], top_module_ast, root_path, 1, top_flg)
                             cg_num += cg_insert_result
                             break
@@ -311,7 +345,10 @@ def cg_insert(module_name, root_path, rpt_root_path, cg_max_num, cg_max_level):
                     cg_insert_result = cg_insert_single_module(curr_module[0], top_module_ast, root_path, 0, top_flg)
                     cg_num += cg_insert_result
                     
+<<<<<<< HEAD
 >>>>>>> 5a7057a (release vision 0.9)
+=======
+>>>>>>> d0a572f (release v0.9)
             
             if cg_num==cg_max_num:
                 return 
@@ -330,8 +367,11 @@ def cg_insert(module_name, root_path, rpt_root_path, cg_max_num, cg_max_level):
         pi_flg = po_flg
         po_flg = tmp_flg
 <<<<<<< HEAD
+<<<<<<< HEAD
         
 =======
+=======
+>>>>>>> d0a572f (release v0.9)
         if top_flg==1:
             top_flg = 0
         
@@ -361,5 +401,8 @@ def cg_insert_random(root_path, cg_max_num, top_name):
         if cg_num==cg_max_num:
             break
     
+<<<<<<< HEAD
 >>>>>>> 5a7057a (release vision 0.9)
+=======
+>>>>>>> d0a572f (release v0.9)
 #cg_insert("top_kernel3_x0", "../../all_ab/dut/solution1/impl/verilog/")
