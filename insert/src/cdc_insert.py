@@ -12,6 +12,7 @@ import os
 import copy
 import re
 import math
+import pdb
 
    
 def modify_only_module_clk(inst, clk_domain):
@@ -228,6 +229,7 @@ def extrace_always_full_name(always, full_name, clk_domain):
 
 def connect_to_module(sig, main_module_list):
     for module in main_module_list:
+        print("***", module.module)
         for portarg in module.portlist:
             if isinstance(sig, ast.Identifier):
                 if portarg.argname==sig:
@@ -329,7 +331,6 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
             decl_reg_add = copy.deepcopy(decl_reg)
             decl_reg_add.list[0].name = port[0]
             add_reg_def.append(decl_reg_add)
-            new_port_list_ce.append(port)
             ce_mux_always = port[6]
             rm_ram_mux.add(ce_mux_always)
             decl_reg_name = ce_mux_always.statement.statements[0].true_statement.statements[0].left.var.name
@@ -339,6 +340,7 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
             new_ce_mux_always.statement.statements[0].true_statement.statements[0].left.var.name = port[0]
             new_ce_mux_always.statement.statements[0].false_statement.statements[0].left.var.name = port[0]
             port[6] = new_ce_mux_always
+            new_port_list_ce.append(port)
             continue
         # find modules connected to the mux input
         clk_dic = {}
@@ -353,6 +355,9 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
         # all from the same clk domain, no need to change 
         # TODO need to verify
         if len(list(clk_dic.keys()))==1:
+            port[8] = list(clk_dic.keys())[0]
+            port[0] = port[0].name
+            new_port_list_ce.append(port)
             continue
         # extract the ce always mux
         ce_mux_always = port[6]
@@ -361,6 +366,7 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
         decl_reg = find_reg_wire_def(decl_reg_name, DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))
         rm_reg_def.append(decl_reg)
         for clk_domain in list(clk_dic.keys()):
+            port[8] = clk_domain
             ce_signals = clk_dic[clk_domain]
             temp_ce_always = extrace_always_full_name(ce_mux_always, ce_signals, clk_domain)
             temp_port = port[0:6]+[temp_ce_always, ce_signals, clk_domain]
@@ -375,13 +381,17 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
     wr_port_list = [] 
     w_port_list = [] 
     r_port_list = [] 
+    if len(new_port_list_ce)==len(port_list):
+        return 0, [], [], [], [], [], []
     for port in new_port_list_ce:
         clk_domain = port[8]
         port = port[0:8]
         naming_rules = []
         # using naming rule to match other ports
         for ce_sig in port[7]:
+            print(ce_sig)
             _, portarg, _ = connect_to_module(ce_sig, main_module_list)
+            print(portarg)
             ce_pattern = f'(\w+)_(\w+)(\d+)'
             ce_match = re.search(ce_pattern, portarg.portname)
             naming_rules.append(rf'{ce_match.group(1)}_(\w+){ce_match.group(3)}')
@@ -503,13 +513,17 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
     factors = [data_width, address_width, address_range]    
     add_ram_inst = []
     inst_idx = 0
-    for port0 in w_port_list:
-        for port1 in r_port_list + wr_port_list:
+    gen_module_names = []
+    for port0 in w_port_list + wr_port_list:
+        for port1 in r_port_list:
             port_dic = {}
             port_dic["w"] = port0[0:5]+[port0[-1]]+["rst_"+port0[-1]]
             port_dic["r"] = port1[0:5]+[port1[-1]]+["rst_"+port1[-1]]
-            gen_async_bram_inst(inst.module+"_"+port0[-1]+"_"+port1[-1]+"_"+str(inst_idx), 
-                                inst.name+"_"+port0[-1]+"_"+port1[-1]+"_"+str(inst_idx),  
+            gen_module_name = inst.module+"_"+port0[-1]+"_"+port1[-1]+"_"+str(inst_idx)
+            gen_module_names.append(gen_module_name)
+            gen_inst_name = inst.name+"_"+port0[-1]+"_"+port1[-1]+"_"+str(inst_idx)
+            gen_async_bram_inst(gen_module_name, 
+                                gen_inst_name,  
                                 port_dic, factors)
             new_ram_ast, _ = rtl_parse(["./"+inst.module+"_"+port0[-1]+"_"+port1[-1]+"_"+str(inst_idx)+"_inst.v"])
             os.system("rm ./"+inst.module+"_"+port0[-1]+"_"+port1[-1]+"_"+str(inst_idx)+"_inst.v")
@@ -528,7 +542,7 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
         if port[12]!=[]:
             add_ram_mux.append(port[12])
         
-    return add_ram_inst, add_ram_mux, list(rm_ram_mux), list(set(add_reg_def)), list(set(rm_reg_def))
+    return 1, add_ram_inst, add_ram_mux, list(rm_ram_mux), list(set(add_reg_def)), list(set(rm_reg_def)), gen_module_names
     
 def main_axi_module_process(module_name, root_path):
     file_path = root_path+"/"+module_name+".v"
@@ -658,18 +672,23 @@ def ram_module_clk_bind(top_module_ast, ram_module_list, main_module_list, modul
     rm_ram_mux_all = []
     rm_instlist_all = []
     rm_reg_def_all = []
+    rm_ram_inst_all = []
     add_reg_def_all = []
+    gen_rams_all = []
     for ram_inst in ram_module_list:
-        add_ram_inst, add_ram_mux, rm_ram_mux, add_reg_def, rm_reg_def = modify_bram_clk(top_module_ast, ram_inst, main_module_list, module_map, mux_always_list)
+        rm_ram_flg, add_ram_inst, add_ram_mux, rm_ram_mux, add_reg_def, rm_reg_def, gen_rams = modify_bram_clk(top_module_ast, ram_inst, main_module_list, module_map, mux_always_list)
         add_ram_inst_all += add_ram_inst
         add_ram_mux_all += add_ram_mux
         rm_ram_mux_all += rm_ram_mux
         rm_reg_def_all += rm_reg_def
         add_reg_def_all += add_reg_def
+        gen_rams_all += gen_rams
+        if rm_ram_flg:
+            rm_ram_inst_all.append(ram_inst)
 
     for item in item_list:
         if isinstance(item, ast.InstanceList):
-            for rm_item in ram_module_list:
+            for rm_item in rm_ram_inst_all:
                 if item.instances[0]==rm_item:
                     rm_instlist_all.append(item)
                     break
@@ -703,6 +722,7 @@ def ram_module_clk_bind(top_module_ast, ram_module_list, main_module_list, modul
     item_list = item_list[0:item_idx]+add_reg_def_all+item_list[item_idx:]
 
     module_def.items = tuple(item_list)
+    return gen_rams_all
     
 def org_rst_rm(top_module_ast):
     module_defs = DFS(top_module_ast, lambda node: isinstance(node, ast.ModuleDef))
@@ -768,11 +788,8 @@ def rm_initial_sig(top_module_ast, sig):
 def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list, case_always_list, main_module_list, fastest_clk_map, module_map):
     fastest_clk = fastest_clk_map[0]
     # sync ready and done signals 
-    rm_sig = []
-    rm_always = []
     mdfy_always = []
-    rm_assign = []
-    rm_decl = []
+    async_always = []
     add_async_inst = []
     add_assign = []
     add_decl = []
@@ -784,25 +801,20 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
             _, _, module = connect_to_module(in_sig, main_module_list)
             in_clk = module_map[module.module]
             if in_clk==fastest_clk:
-                mdfy_always.append("ap_sync_reg_"+match_sync.group(1))
+                mdfy_always.append("ap_sync_reg_"+in_sig)
                 continue
-            out_sig = assign.left.var.name
+            out_sig = assign.left.var.name+"_pre"
             out_clk = fastest_clk 
-            if "ap_done" in in_sig:
-                gen_async_level_inst("async_inst_"+in_sig, in_sig, in_clk, out_sig, out_clk)
-            else:
-                gen_async_pulse_inst("async_inst_"+in_sig, in_sig, in_clk, out_sig, out_clk)
+            gen_async_pulse_inst("async_inst_"+in_sig, in_sig, in_clk, out_sig, out_clk)
             async_inst_ast, _ = rtl_parse(["./async_inst_"+in_sig+"_inst.v"])
             os.system("rm async_inst_"+in_sig+"_inst.v")
             new_instance_list = DFS(async_inst_ast, lambda node : isinstance(node, ast.InstanceList))
             for new_inst_list in new_instance_list:
                 break # only one inst in this file
             add_async_inst.append(new_inst_list)
-            rm_sig.append("ap_sync_reg_"+match_sync.group(1))
-            decl_reg = find_reg_wire_def(rm_sig[-1], DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))
-            rm_decl.append(decl_reg)
-            rm_initial_sig(top_module_ast, decl_reg)
-            rm_assign.append(assign)
+            add_decl.append(ast.Decl([ast.Wire(out_sig)]))
+            assign.right.var.left.name = out_sig
+            async_always.append("ap_sync_reg_"+in_sig)
             continue
  
     state_to_pipe = []
@@ -815,9 +827,10 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
                 # TODO: is there a bug?
                 #always.sens_list.list[0].sig = fastest_clk
                 always.statement.statements[0].cond.left.name = "rst_"+fastest_clk
-            # remove those unused always for async
-            elif var in rm_sig:
-                rm_always.append(always)
+            elif var in async_always:
+                always.sens_list.list[0].sig.name = fastest_clk
+                always.statement.statements[0].cond.left.name = "rst_"+fastest_clk
+                always.statement.statements[0].false_statement.statements[0].false_statement.cond.left.name = "ap_sync_"+var[12:]+"_pre"
 
             # deal with start signals 
             # 1. for FSM_states related condition, sync them
@@ -839,7 +852,7 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
                     #always.sens_list.list[0].sig = in_clk
                     always.statement.statements[0].cond.left.name = "rst_"+in_clk
                     continue
-                gen_async_level_inst("async_inst_"+in_sig, in_sig, in_clk, out_sig, out_clk)
+                gen_async_pulse_inst("async_inst_"+in_sig, in_sig, in_clk, out_sig, out_clk)
                 async_inst_ast, _ = rtl_parse(["./async_inst_"+in_sig+"_inst.v"])
                 os.system("rm async_inst_"+in_sig+"_inst.v")
                 new_instance_list = DFS(async_inst_ast, lambda node : isinstance(node, ast.InstanceList))
@@ -891,7 +904,7 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
                 
                 
     # deal with ap_continue
-    # since ap_continue is a pulst, it need to be delayed to longer
+    # since ap_continue is a pulse, it need to be delayed to longer
     for always in mux_always_list:
         var = always.statement.statements[0].true_statement.statements[0].left.var.name
         if "ap_continue" in var:
@@ -931,8 +944,6 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
     for module_def in module_defs:
         break
     item_list = list(module_def.items)
-    for rm_item in rm_decl+rm_always+rm_assign:
-        item_list.remove(rm_item)
     item_list += add_async_inst + add_assign + add_always
     for item_idx in range(len(item_list)):
         if isinstance(item_list[item_idx], ast.Decl):
@@ -943,16 +954,24 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
         
 def cdc_insert(module_name, module_map, fastest_clk_map, root_path):
     top_module_ast, axi_module_list, cg_module_list, main_module_list, fifo_module_list, ram_module_list, other_module_list, pose_always_list, case_always_list, assign_always_list, mux_always_list, assign_list = read_file(module_name, module_map, root_path)
-    ram_module_clk_bind(top_module_ast, ram_module_list, main_module_list, module_map, mux_always_list)
+    gen_rams_all = ram_module_clk_bind(top_module_ast, ram_module_list, main_module_list, module_map, mux_always_list)
     #axi_module_clk_bind(axi_module_list, module_map[module_name]) #maintain the clock
     main_module_clk_bind(main_module_list, module_map, root_path)
     fifo_module_clk_bind(fifo_module_list, main_module_list, module_map)
     #org_rst_rm(top_module_ast) # reserve for axi
     fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list, case_always_list, main_module_list, fastest_clk_map, module_map)
     rtl_generator = ASTCodeGenerator()
-    new_rtl = rtl_generator.visit(top_module_ast)
+    new_rtl = [rtl_generator.visit(top_module_ast)]
+    
+    gen_rams_all = list(set(gen_rams_all))
+    for gen_ram in gen_rams_all:
+        with open(gen_ram+".v", "r") as f:
+            new_rtl+=f.readlines()
+        os.system("rm "+gen_ram+".v ")
+        
     with open(module_name+".v", 'w') as f:
-        f.write(new_rtl) 
+        for line in new_rtl:
+            f.write(line) 
     os.system("mv *.v "+root_path)
     
  

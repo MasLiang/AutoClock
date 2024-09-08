@@ -46,9 +46,14 @@ def crg_insert(module_name, root_path):
     
     # generate new rtl
     rtl_generator = ASTCodeGenerator()
-    new_rtl = rtl_generator.visit(top_ast)
+    new_rtl = [rtl_generator.visit(top_ast)]
+
+    with open(root_path+"/"+module_name+"_crg.v", "r") as f:
+        new_rtl += f.readlines()
+
     with open(module_name+".v", 'w') as f:
-        f.write(new_rtl) 
+        for line in new_rtl:
+            f.write(line) 
     os.system("mv *.v "+root_path)
 
 #crg_insert("top", "./verilog/")

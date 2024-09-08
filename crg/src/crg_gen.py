@@ -216,6 +216,7 @@ def crg_gen(file):
         lst_rst_sync_wire += lst_rst_sync[0]
         lst_rst_sync_inst += lst_rst_sync[1]
         lst_rst_sync_inst += ["\n"]
+        pll_fag = 0
         for unit_idx in range(len(clk_map_mmcm[src_clk])):
             if clk in clk_map_mmcm[src_clk][unit_idx][1]:
                 pll_fag = 1

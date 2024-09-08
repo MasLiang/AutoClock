@@ -4,18 +4,23 @@ import pyverilog.vparser.ast as ast
 import os
 import copy
 import re
+<<<<<<< HEAD
 import pdb
+=======
+import random
+>>>>>>> 5a7057a (release vision 0.9)
 from .rtl_parser import *
 
-def determain_cgen(top_module_ast, undf_flg):
+def determain_cgen(top_module_ast, undf_flg, top_flg):
+    # cgen = !ap_idle | ap_reset
+    idle_pattern = r'ap_idle'
+    done_pattern = r'ap_done'
     if undf_flg:
-        # cgen = !(idle |(ap_ST_fsm_state*_blk & ap_CS_fsm_state*))
-        all_wire = DFS(top_module_ast, lambda node : isinstance(node, ast.Wire))
         all_reg = DFS(top_module_ast, lambda node : isinstance(node, ast.Reg))
         state_idx_list = []
         block_state_pattern = r'ap_ST_fsm_state(\d+)_blk'
-        idle_pattern = r'ap_idle'
         ap_idle_flg = 0
+        ap_done_flg = 0
         for reg in all_reg:
             match = re.search(block_state_pattern, reg.name)
             if match:
@@ -23,6 +28,11 @@ def determain_cgen(top_module_ast, undf_flg):
             match = re.search(idle_pattern, reg.name)
             if match:
                 ap_idle_flg = 1
+            # ap_done_reg will be triggered by "continue" outside,  and at that time, the module is idld
+            # So the clock should open for "ap_done_reg"
+            match = re.search(done_pattern, reg.name)
+            if match:
+                ap_done_flg = 1
 
         cgen_n = ""
         if len(state_idx_list)>0:
@@ -32,22 +42,75 @@ def determain_cgen(top_module_ast, undf_flg):
                 else:
                     cgen_n = cgen_n+" | (ap_ST_fsm_state"+str(state_idx)+"_blk & ap_CS_fsm_state"+str(state_idx)+")"
             
+<<<<<<< HEAD
         if ap_idle_flg:
             #cgen = "!("+cgen_n+" | ap_idle)"
             cgen = "!ap_idle"
+=======
+        if ap_idle_flg: 
+            if top_flg:
+                if ap_done_flg:
+                    cgen = "!ap_idle | ap_rst_n_inv | ap_done"
+                else:
+                    cgen = "!ap_idle | ap_rst_n_inv"
+            else:
+                if ap_done_flg:
+                    cgen = "!ap_idle | ap_rst | ap_done"
+                else:
+                    cgen = "!ap_idle | ap_rst"
+>>>>>>> 5a7057a (release vision 0.9)
         else:
             #cgen = "!("+cgen_n+")"
             cgen = ""
         return cgen
     else:
+        ap_idle_flg = 0
+        ap_done_flg = 0
+        all_wire = DFS(top_module_ast, lambda node : isinstance(node, ast.Wire))
+        for wire in all_wire:
+            match = re.search(idle_pattern, wire.name)
+            if match:
+                ap_idle_flg = 1
+            match = re.search(done_pattern, wire.name)
+            if match:
+                ap_done_flg = 1
+        if ap_idle_flg==0 and ap_done_flg==0:
+            all_output = DFS(top_module_ast, lambda node : isinstance(node, ast.Output))
+            for outsig in all_output:
+                if outsig.name=="ap_idle":
+                    ap_idle_flg = 1
+                if outsig.name=="ap_done":
+                    ap_done_flg = 1
+
+        if top_flg:
+            if ap_idle_flg:
+                if ap_done_flg:
+                    return "!ap_idle | ap_rst_n_inv | ap_done"
+                else:
+                    return "!ap_idle | ap_rst_n_inv"
+        else:
+            if ap_idle_flg:
+                if ap_done_flg:
+                    return "!ap_idle | ap_rst | ap_done"
+                else:
+                    return "!ap_idle | ap_rst"
+
         all_output = DFS(top_module_ast, lambda node : isinstance(node, ast.Output))
         for outsig in all_output:
             if outsig.name=="ap_idle":
-                return "ap_idle"
+                if top_flg:
+                    return "!ap_idle | ap_rst_n_inv"
+                else:
+                    return "!ap_idle | ap_rst"
         return "" 
     
+<<<<<<< HEAD
 def cg_insert_single_module(module_name, top_module_ast, top_module, root_path):
     cgen = determain_cgen(top_module_ast, 1)
+=======
+def cg_insert_single_module(module_name, top_module_ast, root_path, undf_flg, top_flg):
+    cgen = determain_cgen(top_module_ast, undf_flg, top_flg)
+>>>>>>> 5a7057a (release vision 0.9)
     if cgen=="":
         return 0
 
@@ -60,6 +123,7 @@ def cg_insert_single_module(module_name, top_module_ast, top_module, root_path):
                 if isinstance(always.statement.statements[0].true_statement.statements[0].left.var, ast.Identifier):
                     var = always.statement.statements[0].true_statement.statements[0].left.var.name
                     # bind to the fastest clock
+                    # FSM will control the clock gate
                     if var=="ap_CS_fsm":
                         continue
                     elif always.sens_list.list[0].type=="posedge":
@@ -107,6 +171,7 @@ def cg_insert_single_module(module_name, top_module_ast, top_module, root_path):
 
     top_def.items = tuple(top_items_list[:top_decl_idx]+cg_items_list[:cg_decl_idx]+top_items_list[top_decl_idx:]+cg_items_list[cg_decl_idx:])
 
+    top_module_ast.show()
     rtl_generator = ASTCodeGenerator()
     new_rtl = rtl_generator.visit(top_module_ast)
     print(root_path+"/"+module_name+".v")
@@ -154,7 +219,14 @@ def rpt_parser(module_name, rpt_root_path, pre_latency):
                 latency_flg = 1
                 latency_line_idx = line_idx + 3
                 latency_line = lines[latency_line_idx].replace(" ", "").split("|")
+<<<<<<< HEAD
                 latency = int(latency_line[1])
+=======
+                if latency_line[1]=="?":
+                    latency = 1
+                else:
+                    latency = int(latency_line[1])
+>>>>>>> 5a7057a (release vision 0.9)
         elif not resource_type_flg:
             match = re.match(resource_head_pattern, lines[line_idx])
             if match:
@@ -178,7 +250,11 @@ def rpt_parser(module_name, rpt_root_path, pre_latency):
     
     return latency, power_saved
 
+<<<<<<< HEAD
 def cg_insert(module_name, root_path, rpt_root_path, cg_max_num, cg_max_level, top_module=1):
+=======
+def cg_insert(module_name, root_path, rpt_root_path, cg_max_num, cg_max_level):
+>>>>>>> 5a7057a (release vision 0.9)
 
     module_list = [[], []]
     pi_flg = 0
@@ -190,9 +266,15 @@ def cg_insert(module_name, root_path, rpt_root_path, cg_max_num, cg_max_level, t
     tmp_latency, tmp_power_saved = rpt_parser(module_name, rpt_root_path, 0)
     # name, latency, power_saved
     module_list[pi_flg].append([module_name, tmp_latency, tmp_power_saved])
+<<<<<<< HEAD
 
     while 1:
         pdb.set_trace()
+=======
+    top_flg = 1
+
+    while 1:
+>>>>>>> 5a7057a (release vision 0.9)
         curr_module_list = module_list[pi_flg]
         nxt_module_list = module_list[po_flg]
         print(curr_module_list)
@@ -217,9 +299,19 @@ def cg_insert(module_name, root_path, rpt_root_path, cg_max_num, cg_max_level, t
                 if len(case_always_list)>0:
                     for case_always in case_always_list:
                         if case_always.statement.statements[0].comp.name=="ap_CS_fsm":
+<<<<<<< HEAD
                             cg_insert_result = cg_insert_single_module(curr_module[0], top_module_ast, top_module, root_path)
                             cg_num += cg_insert_result
                             break
+=======
+                            cg_insert_result = cg_insert_single_module(curr_module[0], top_module_ast, root_path, 1, top_flg)
+                            cg_num += cg_insert_result
+                            break
+                else:
+                    cg_insert_result = cg_insert_single_module(curr_module[0], top_module_ast, root_path, 0, top_flg)
+                    cg_num += cg_insert_result
+                    
+>>>>>>> 5a7057a (release vision 0.9)
             
             if cg_num==cg_max_num:
                 return 
@@ -237,5 +329,37 @@ def cg_insert(module_name, root_path, rpt_root_path, cg_max_num, cg_max_level, t
         tmp_flg = pi_flg
         pi_flg = po_flg
         po_flg = tmp_flg
+<<<<<<< HEAD
         
+=======
+        if top_flg==1:
+            top_flg = 0
+        
+
+def cg_insert_random(root_path, cg_max_num, top_name):
+    files = [f for f in os.listdir(root_path) if os.path.isfile(os.path.join(root_path, f))]
+    cg_num = 0
+    while 1:
+        file = random.sample(files, 1)
+        if file[0][-2:]!=".v":
+            continue
+        if file[0][:-2]==top_name:
+            top_flg = 1
+        else:
+            top_flg = 0
+        top_module_ast, _, cg_module_list, main_module_list, _, _, other_module_list, _, case_always_list, _, _, _ = read_file(file[0][:-2], {}, root_path)
+        if len(cg_module_list)==0:
+            if len(case_always_list)>0:
+                for case_always in case_always_list:
+                    if case_always.statement.statements[0].comp.name=="ap_CS_fsm":
+                        cg_insert_result = cg_insert_single_module(file[0][:-2], top_module_ast, root_path, 1, top_flg)
+                        cg_num += cg_insert_result
+                        break
+            else:
+                cg_insert_result = cg_insert_single_module(file[0][:-2], top_module_ast, root_path, 0, top_flg)
+                cg_num += cg_insert_result
+        if cg_num==cg_max_num:
+            break
+    
+>>>>>>> 5a7057a (release vision 0.9)
 #cg_insert("top_kernel3_x0", "../../all_ab/dut/solution1/impl/verilog/")
