@@ -3,17 +3,10 @@ Currently, only support Xilinx Ultrascale and Ultrascale+.
 There are some features (Continuously updating)
     
     1. generate CRG automatically. (done)
-        - clock mux (BUFGCE_MUX)
-            e.g., 
-                  #pragma HLS clkdomain clk1 10 5 3 1
-                  #pragma HLS clksel clk1 sel
-                This means the module following belongs to clock domain "clk1", and this clock
-                has four frequency, 10ns, 5ns, 3ns, 1ns. The signal used to select different 
-                frequency is "sel"
     
         - PLL/MMCM/BUFGCE_DIV selection automatically
             e.g., 
-                  #pragma HLS clkdomain clk_src 10
+                  #pragma HLS inputclk clk_src 10
                   void top(){
                     #pragma HLS clkdomain clk1 20
                     module_1();
@@ -22,16 +15,7 @@ There are some features (Continuously updating)
                   };
                 In this example, "clk_src" is connected to clock pin. Since the frequency of "clk1"
                 is 1/2 of "clk_src", the BUFGCE_DIV is used to generate it. For "clk2", PLL is used.
-                If there are more than 2 clock domains generated from the same source clock, a MMCM 
-                will be generated since a PLL can only generated 2 output clock while a MMCM supports
-                7 output clock ports.
             
-        - clock gate (BUFGCE)
-            Automatically insert clock gate to modules. For un-dataflow module with FSM, the 
-            block_state and ap_idle will be used as clock enable signal. For dataflow module without 
-            FSM, ap_idle will be used as clock enable signal. For macros such as fifo, ram, dsp, 
-            no clock gate is inserted.
-
         - rst_sync
             Reset for each clock domain will be generated automatically.
 
@@ -40,31 +24,42 @@ There are some features (Continuously updating)
             Wrapper of MMCM if MMCM is used
             CRG module
 
-    2. generate CDC circuit automatically according to INTERFACE type. (on going)
+    2. generate CDC circuit automatically according to INTERFACE type. (done)
         
-        - bound modules to different clock domain according to connection
-            - Macros belonging to the same clock domain (on going)
-            - Macros belonging to different clock domain : clock mux ? (on going)
-
-        - Insert CDC circuits between different clock domain
+        - insert CDC circuits between different clock domain
             The CDC circuit selection depends on the INTERFACE type. 
                 - FIFO interface: async-fifo 
                 - BRAM interface: async-bram 
                 - FSM : 
                     - set FSM at the fasest clock domain
-                    - expanding control signals (on going)
-                        - syncronize the edge if they are pose-sensitive (on going) 
-                    - pipe for some states because of clock domain (on going)
+                    - expanding control signals
+                        - syncronize the edge if they are pose-sensitive
+                    - pipe for some states because of clock domain
                     
-        
-        - original clock/reset related signals need to be updated (on going)
+        - original clock/reset related signals need to be updated
 
         - output file:
             CDC circuit
             modified modules
 
-    3. generate XDC file automatically (not start)
+    3. insert clock gates 
+        - from high to low level 
+        
+        - skip sub-modules of dataflow modules
+            - if a dataflow modules is well optimized for streaming, sub-modules will always run with 
+              father module.
+        
+        - based on Xilinx Power Estimator
 
 
     4. How to run:
-        cd to the src path, modify the example.c, then "python crg_gen.py"
+        - install packages:
+            - pyverilog
+
+        - cd to the path of a benchmark, modify the path of AutoClock
+
+        - "make xclbin" to generate bitstream
+
+        - "make host" to generate host.exe
+
+        - "host.ext -xclbin top.xclbin" to run it on FPGA
