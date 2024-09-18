@@ -1,5 +1,8 @@
-This project is used for Low-Power HLS design. 
+This project open-source code of AutoClock for low-power HLS design. 
 Currently, only support Xilinx Ultrascale and Ultrascale+. 
+
+CRG.pdf illustrates an example of the output of AutoCLock.
+
 There are some features (Continuously updating)
     
     1. generate CRG automatically. (done)
