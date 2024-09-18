@@ -229,7 +229,6 @@ def extrace_always_full_name(always, full_name, clk_domain):
 
 def connect_to_module(sig, main_module_list):
     for module in main_module_list:
-        print("***", module.module)
         for portarg in module.portlist:
             if isinstance(sig, ast.Identifier):
                 if portarg.argname==sig:
@@ -389,9 +388,7 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
         naming_rules = []
         # using naming rule to match other ports
         for ce_sig in port[7]:
-            print(ce_sig)
             _, portarg, _ = connect_to_module(ce_sig, main_module_list)
-            print(portarg)
             ce_pattern = f'(\w+)_(\w+)(\d+)'
             ce_match = re.search(ce_pattern, portarg.portname)
             naming_rules.append(rf'{ce_match.group(1)}_(\w+){ce_match.group(3)}')

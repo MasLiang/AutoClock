@@ -121,15 +121,12 @@ def read_file(module_name, module_map, root_path):
     all_instanceslist = DFS(top_module_ast, lambda node : isinstance(node, ast.InstanceList))
     all_always = DFS(top_module_ast, lambda node : isinstance(node, ast.Always))
     all_assign = DFS(top_module_ast, lambda node : isinstance(node, ast.Assign))
-    print(module_map)
     for inst in all_instances:
-        print(inst.module)
         if "s_axi" in inst.module or "m_axi" in inst.module:
             axi_module_list.append(inst)
         elif "BUFGCE" == inst.module:
             cg_module_list.append(inst)
         elif inst.module in list(module_map.keys()):
-            print("true")
             main_module_list.append(inst)
         elif is_fifo_inst(inst):
             fifo_module_list.append(inst)

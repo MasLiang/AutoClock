@@ -1,3 +1,4 @@
+import os
 from .template.mmcme4_adv import *
 from .template.plle4_adv import *
 from .template.bufgmux import *
@@ -10,7 +11,7 @@ def crg_gen(file):
     modules, domains, domains_sel_if, fastest_clk_map= extract_clk_domains(file)
     if(len(list(modules.keys()))==0):
         print(" No user defined clock domains ")
-        return 0, modules, fastest_clk_map
+        return 0, modules, fastest_clk_map, []
         
     clk_map_mux, clk_map_bypass, clk_map_div, clk_map_mmcm = clk_resource_cal(domains)
     
@@ -30,6 +31,7 @@ def crg_gen(file):
     lst_bufi_inst = []
     lst_crg_inst = []
     lst_crg_wire = []
+    lst_new_module = []
 
     top_module = list(modules.keys())[0]
     lst_clk = list(domains.keys())
@@ -54,13 +56,17 @@ def crg_gen(file):
         clkin_period = domains[src_clk]
         clkout_num = len(unit[1])
         if unit[0] == "mmcm":
-            lst_mmcm = gen_mmcme4_inst("mmcm"+str(unit_idx),[clkin_period, clkout_num]+unit[2]+[0 for _ in range(7-clkout_num)])
+            mmcm_name = "mmcm"+str(unit_idx)
+            lst_new_module.append(mmcm_name+".v")
+            lst_mmcm = gen_mmcme4_inst(mmcm_name,[clkin_period, clkout_num]+unit[2]+[0 for _ in range(7-clkout_num)])
             lst_mmcm_wire += lst_mmcm[0]
             lst_mmcm_inst += lst_mmcm[1]
             lst_assign.append(f'''{'assign    mmcm'+str(unit_idx)+'_clk_in0':<40}=    {src_clk}_ibuf;''')
             lst_assign.append(f'''{'assign    mmcm'+str(unit_idx)+'_reset':<40}=    ~rst_n_sys;''')
         elif unit[0]=="pll":
-            lst_pll = gen_plle4_inst("pll"+str(unit_idx),[clkin_period, clkout_num]+unit[2]+[0 for _ in range(2-clkout_num)])
+            pll_name = "pll"+str(unit_idx)
+            lst_new_module.append(pll_name+".v")
+            lst_pll = gen_plle4_inst(pll_name,[clkin_period, clkout_num]+unit[2]+[0 for _ in range(2-clkout_num)])
             lst_assign.append(f'''{'assign    pll'+str(unit_idx)+'_clk_in0':<40}=    {src_clk}_ibuf;''')
             lst_assign.append(f'''{'assign    pll'+str(unit_idx)+'_reset':<40}=    ~rst_n_sys;''')
             lst_pll_wire += lst_pll[0]
@@ -248,6 +254,7 @@ def crg_gen(file):
                 f.write("\n")
         f.write("endmodule")
 
+
     with open(top_module+"_crg_inst.v", "w") as f:
         f.write("module "+top_module+"_crg_inst(\n")
         f.write("input clk,\n")
@@ -260,4 +267,4 @@ def crg_gen(file):
             f.write("\n")        
         f.write("endmodule")
 
-    return 1, modules, fastest_clk_map
+    return 1, modules, fastest_clk_map, lst_new_module

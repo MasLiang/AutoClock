@@ -94,8 +94,6 @@ with open(proj_path+'/run_hls.tcl', 'w') as f:
     f.write("\n")
     f.write("add_files "+syn_rtl_path+"/top_crg.v")
     f.write("\n")
-    f.write("export_design -rtl verilog -format xo -output "+proj_name+".xo")
-    f.write("\n")
     f.write("exit")
 
 #using VITIS_HLS to generate Verilog

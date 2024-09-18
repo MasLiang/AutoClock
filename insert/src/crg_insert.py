@@ -4,7 +4,7 @@ from .rtl_parser import *
 import pyverilog.vparser.ast as ast
 import os
 
-def crg_insert(module_name, root_path):
+def crg_insert(module_name, root_path, lst_new_module):
     # read crg
     crg_ast, _ = rtl_parse([root_path+"/"+module_name+"_crg_inst.v"])
     os.system("rm "+root_path+"/"+module_name+"_crg_inst.v")
@@ -50,7 +50,15 @@ def crg_insert(module_name, root_path):
 
     with open(root_path+"/"+module_name+"_crg.v", "r") as f:
         new_rtl += f.readlines()
+    new_rtl+="\n"
+    os.system("rm "+root_path+"/"+module_name+"_crg.v")
 
+    for new_module in lst_new_module:
+        with open(root_path+"/"+new_module, "r") as f:
+            new_rtl += f.readlines()
+        new_rtl+="\n"
+        os.system("rm "+root_path+"/"+new_module)
+        
     with open(module_name+".v", 'w') as f:
         for line in new_rtl:
             f.write(line) 
