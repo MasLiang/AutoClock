@@ -40,8 +40,9 @@ parser.add_argument("--cpp_path", type=str, default="0")
 parser.add_argument("--solution_name", type=str, default="0")
 parser.add_argument("--xo_path", type=str, default="0")
 parser.add_argument("--rdm", type=int, default=0)
+parser.add_argument("--dfs", type=int, default=0)
 parser.add_argument("--gate_num", type=int, default=10)
-parser.add_argument("--gate_level", type=int, default=2)
+parser.add_argument("--gate_level", type=int, default=0)
 parser.add_argument("--gate_enable", type=str, default="true")
 args = parser.parse_args()
 
@@ -53,6 +54,7 @@ solution_name = args.solution_name
 cpp_path = args.cpp_path
 xo_path = args.xo_path
 rdm = args.rdm
+dfs = args.dfs
 gate_num = args.gate_num
 gate_level = args.gate_level
 gate_enable = args.gate_enable
@@ -67,7 +69,7 @@ rpt_root_path = proj_path+"/"+proj_name+"/"+solution_name+"/syn/report/"
 os.system("cp "+cpp_path+cpp_top_name+"_backup.cpp "+cpp_path+cpp_top_name+".cpp")
 
 # parser HLS to generate crg
-flg, module_map, fastest_clk_map = crg_gen(cpp_path+cpp_top_name+".cpp")
+flg, module_map, fastest_clk_map, lst_new_module = crg_gen(cpp_path+cpp_top_name+".cpp")
 
 # temp delete "synthesis translate_off"
 temp_deal(syn_rtl_path+proj_name+".v")
@@ -77,12 +79,14 @@ if flg==1:
     cdc_insert(proj_name, module_map, fastest_clk_map, syn_rtl_path)
 
     # insert crg
-    crg_insert(proj_name, syn_rtl_path)
+    crg_insert(proj_name, syn_rtl_path, lst_new_module)
 
 # insert clock gate
 if gate_enable=="true":
     if rdm:
         cg_insert_random(syn_rtl_path, gate_num, "top")
+    elif dfs:
+        cg_insert_dfs(proj_name, syn_rtl_path, rpt_root_path, gate_num, gate_level)
     else:
         cg_insert(proj_name, syn_rtl_path, rpt_root_path, gate_num, gate_level)
 
@@ -93,6 +97,8 @@ with open(proj_path+'/run_hls.tcl', 'w') as f:
     f.write("open_solution "+solution_name)
     f.write("\n")
     f.write("add_files "+syn_rtl_path+"/top_crg.v")
+    f.write("\n")
+    f.write("export_design -rtl verilog -format xo -output "+proj_name+".xo")
     f.write("\n")
     f.write("exit")
 
