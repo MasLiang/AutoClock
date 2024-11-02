@@ -27,4 +27,3 @@ with open(file_path, 'r') as file:
 with open(file_path, 'w') as file:
     for line in new_lines:
         file.write(line)
-

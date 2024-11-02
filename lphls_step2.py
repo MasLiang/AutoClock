@@ -2,7 +2,6 @@ from crg.src.crg_gen import *
 from insert.src.cdc_insert import *
 from insert.src.crg_insert import *
 from insert.src.cg_insert import *
-import pdb
 import os
 import argparse
 import re
@@ -32,7 +31,7 @@ def temp_deal(file_path):
 
 
 parser = argparse.ArgumentParser(description='manual to this script')
-parser.add_argument("--root_path", type=str, default="0")
+parser.add_argument("--root_path", type=str, default="/Projects/jiawei/workspace/AutoClock_v2/benchmark/TDM_test/kernel/top.cpp")
 parser.add_argument("--proj_path", type=str, default="0")
 parser.add_argument("--proj_name", type=str, default="0")
 parser.add_argument("--cpp_top_name", type=str, default="0")
@@ -69,7 +68,7 @@ rpt_root_path = proj_path+"/"+proj_name+"/"+solution_name+"/syn/report/"
 os.system("cp "+cpp_path+cpp_top_name+"_backup.cpp "+cpp_path+cpp_top_name+".cpp")
 
 # parser HLS to generate crg
-flg, module_map, fastest_clk_map, lst_new_module = crg_gen(cpp_path+cpp_top_name+".cpp")
+flg, module_map, fastest_clk_map, lst_new_module, tdm_modules = crg_gen(cpp_path+cpp_top_name+".cpp")
 
 # temp delete "synthesis translate_off"
 temp_deal(syn_rtl_path+proj_name+".v")
@@ -79,7 +78,7 @@ if flg==1:
     cdc_insert(proj_name, module_map, fastest_clk_map, syn_rtl_path)
 
     # insert crg
-    crg_insert(proj_name, syn_rtl_path, lst_new_module)
+    crg_insert(proj_name, syn_rtl_path, lst_new_module, tdm_modules)
 
 # insert clock gate
 if gate_enable=="true":
@@ -95,8 +94,6 @@ with open(proj_path+'/run_hls.tcl', 'w') as f:
     f.write("open_project "+proj_name)
     f.write("\n")
     f.write("open_solution "+solution_name)
-    f.write("\n")
-    f.write("add_files "+syn_rtl_path+"/top_crg.v")
     f.write("\n")
     f.write("export_design -rtl verilog -format xo -output "+proj_name+".xo")
     f.write("\n")

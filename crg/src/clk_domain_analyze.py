@@ -46,7 +46,7 @@ def bufgce_div_cal(domains):
     
     return clk_map, domains
 
-def bufgce_mux_cal(domains, u50_flg):
+def bufgce_mux_cal(domains, modules, domains_sel_if, u50_flg):
     # This function is to deal with clk mux. If there is a clock domain have more 
     #  than one period, this clock will be muxed from other temp clocks.
     
@@ -65,6 +65,10 @@ def bufgce_mux_cal(domains, u50_flg):
     # Return new domains and a clock_mux_map.
     
     clk_map = {}
+    # After this function, output of mux will be removed from domains.
+    # However, they will be connected to output. So, record them.
+    mux_out_domain = {}
+    # User configure clock mux
     for domain in list(domains.keys()):
         periods = domains[domain].split()
         num_periods = len(periods)
@@ -78,7 +82,21 @@ def bufgce_mux_cal(domains, u50_flg):
                 clk_map[domain] = ["bufgce_mux", sel_clk]
             else:
                 return # TODO
-                                
+    # infered clock mux for TDM modules. After verilog code being generated, 
+    #   this part will be further checked. If VITIS do not TDM them, this 
+    #   part will not be used. 
+    # TODO: how to map from module to verilog? change name?
+    for module in list(modules.keys()):
+        domains_of_module = modules[module]
+        num_domains = len(domains_of_module)
+        if len(domains_of_module)>1:
+            sel_clk = []
+            for i in domains_of_module:
+                sel_clk.append(i)
+            # new domain name module+"_clk"
+            clk_map[module+"_clk"] = ["bufgce_mux", sel_clk]
+            mux_out_domain[module] = module+"_clk"
+            domains_sel_if[module+"_clk"] = ["sel"]
 
     # for calculation later, strings are converted to float
     for domain in list(domains.keys()):
@@ -97,7 +115,7 @@ def bufgce_mux_cal(domains, u50_flg):
         clk_map[mux] = clk_map[mux_out]
         del clk_map[mux_out]
         
-    return clk_map, domains
+    return clk_map, domains, mux_out_domain
                 
 def bypass_cal(domains):
     # This function is to find clocks with the same period.
@@ -196,14 +214,15 @@ def pll_mmcm_cal(domains):
             ilp_solver += n_pll*device_info[2] + n_mmcm*device_info[3] > p_min
             continue
 
-def clk_resource_cal(domains):
+def clk_resource_cal(domains, modules, domains_sel_if):
     # clk_map is used to generate some BUFs
     # domains is used to generate PLL
     domains_copy = domains.copy()
-    clk_map_mux, domains_copy =  bufgce_mux_cal(domains_copy, 1)
+    modules_copy = modules.copy()
+    clk_map_mux, domains_copy, mux_out_domain =  bufgce_mux_cal(domains_copy, modules_copy, domains_sel_if, 1)
     clk_map_bypass, domains_copy = bypass_cal(domains_copy)
     clk_map_div, domains_copy =  bufgce_div_cal(domains_copy)
     clk_map_mmcm = pll_mmcm_cal(domains_copy)
 
-    return clk_map_mux, clk_map_bypass, clk_map_div, clk_map_mmcm
+    return clk_map_mux, clk_map_bypass, clk_map_div, clk_map_mmcm, mux_out_domain
 

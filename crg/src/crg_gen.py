@@ -6,14 +6,15 @@ from .template.bufgce_div import *
 from .template.rst_sync import *
 from .clk_domain_analyze import clk_resource_cal
 from .clk_domain_extract import extract_clk_domains
+import pdb
 
 def crg_gen(file):
     modules, domains, domains_sel_if, fastest_clk_map= extract_clk_domains(file)
     if(len(list(modules.keys()))==0):
         print(" No user defined clock domains ")
-        return 0, modules, fastest_clk_map, []
+        return 0, modules, fastest_clk_map, [], {}
         
-    clk_map_mux, clk_map_bypass, clk_map_div, clk_map_mmcm = clk_resource_cal(domains)
+    clk_map_mux, clk_map_bypass, clk_map_div, clk_map_mmcm, mux_out_domains = clk_resource_cal(domains, modules, domains_sel_if)
     
     lst_port = []
     lst_assign = []    
@@ -32,24 +33,37 @@ def crg_gen(file):
     lst_crg_inst = []
     lst_crg_wire = []
     lst_new_module = []
+    tdm_modules = {}
 
     top_module = list(modules.keys())[0]
+    
     lst_clk = list(domains.keys())
+    for mux_out_domain in list(mux_out_domains.keys()):
+        lst_clk.append(mux_out_domains[mux_out_domain])
+        tdm_modules[mux_out_domain] = clk_map_mux[mux_out_domains[mux_out_domain]][1]
     src_clk = lst_clk[0]
+    
+
+    for module_unit in list(modules.keys())[1:]:
+        if len(modules[module_unit])>1:
+            modules[module_unit] = mux_out_domains[module_unit]
+        else:
+            modules[module_unit] = modules[module_unit][0]
     
     lst_bufi_wire.append("wire    "+src_clk+"_ibuf;")
     lst_bufi_inst.append("IBUF clkin_ibuf")
     lst_bufi_inst.append("(    .O    ("+src_clk+"_ibuf),")
     lst_bufi_inst.append("     .I    ("+src_clk+"));")
 
-    #print("clk_map_mux" , clk_map_mux)
-    #print("clk_map_bypass" , clk_map_bypass)
-    #print("clk_map_div" , clk_map_div)
-    #print("clk_map_mmcm" , clk_map_mmcm)
-    #print("sel_if:", domains_sel_if)
-    #print("module:", modules)
-    #print("domains:", domains)
-    #
+    print("clk_map_mux" , clk_map_mux)
+    print("clk_map_bypass" , clk_map_bypass)
+    print("clk_map_div" , clk_map_div)
+    print("clk_map_mmcm" , clk_map_mmcm)
+    print("sel_if:", domains_sel_if)
+    print("module:", modules)
+    print("domains:", domains)
+    print("mux_out:", mux_out_domains)
+    
     # generate mmcm or pll to generate clks in domains
     for unit_idx in range(len(clk_map_mmcm[src_clk])):
         unit = clk_map_mmcm[src_clk][unit_idx]
@@ -148,7 +162,7 @@ def crg_gen(file):
                 lst_assign.append(f'''{'assign    mux_'+unit+'_clk_in_'+str(mux_in_idx):<40}=    {src_clk}_ibuf;''')
             # connect input of mux to output of div
             elif clk_map_mux[unit][1][mux_in_idx] in clk_map_div:
-                lst_assign.append(f'''{'assign    mux_'+unit+'_clk_in_'+str(mux_in_idx):<40}=    div_{unit}_o;''')
+                lst_assign.append(f'''{'assign    mux_'+unit+'_clk_in_'+str(mux_in_idx):<40}=    div_{clk_map_mux[unit][1][mux_in_idx]}_o;''')
             # connect input of mux to output of bypass
             elif clk_map_mux[unit][1][mux_in_idx] in clk_map_bypass:
                 lst_assign.append(f'''{'assign    mux_'+unit+'_clk_in_'+str(mux_in_idx):<40}=    {clk_map_mux[unit][1][mux_in_idx]};''')
@@ -176,7 +190,9 @@ def crg_gen(file):
     # gen port
     lst_port.append(f'''module {top_module}_crg{'('}''')
     lst_crg_inst.append(f'''{top_module}_crg u_crg(''')
-    for clk in lst_clk[1:]:
+    for clk in lst_clk:
+        if(clk==src_clk):
+            continue
         if clk in domains_sel_if :
             lst_port.append("   input       "+clk+"_"+domains_sel_if[clk][0]+",")
             lst_crg_inst.append(f'''{'    .'+clk+'_'+domains_sel_if[clk][0]:<40}({clk+'_'+domains_sel_if[clk][0]}),''')
@@ -267,4 +283,5 @@ def crg_gen(file):
             f.write("\n")        
         f.write("endmodule")
 
-    return 1, modules, fastest_clk_map, lst_new_module
+    return 1, modules, fastest_clk_map, lst_new_module, tdm_modules
+

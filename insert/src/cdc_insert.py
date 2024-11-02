@@ -141,24 +141,44 @@ def find_mux_in(sig, mux_always_list):
     return mux_input, always
 
 def find_mux_out(sig, mux_always_list):
+    # In some cases, the signal will be used in the 2nd, 3rd,... state. 
+    # So a while(1) is designed for each always to check all its states.
     mux_output = []
+    mux_match_flg = 0
     for always in mux_always_list:
-        if always.statement.statements[0].true_statement.statements[0].right.var==sig:
-            for states in always.statement.statements:
-                var = states.true_statement.statements[0].left.var
-                mux_output.append(var)
-                while (isinstance(states.false_statement, ast.IfStatement)):
-                    states = states.false_statement
-                    var = states.true_statement.statements[0].right.var
-                    mux_output.append(var)
-                var = states.false_statement.statements[0].right.var
-                mux_output.append(var)
+        for states in always.statement.statements:
+            var = states.true_statement.statements[0].right.var
+            if var==sig:
+                mux_match_flg = 1
+                break
+            while (isinstance(states.false_statement, ast.IfStatement)):
+                states = states.false_statement
+                var = states.true_statement.statements[0].right.var
+                if var==sig:
+                    mux_match_flg = 1
+                    break
+            if mux_match_flg==1:
+                break
+            var = states.false_statement.statements[0].right.var
+            if var==sig:
+                mux_match_flg = 1
+                break
+        if mux_match_flg==1:
             break
 
+    for states in always.statement.statements:
+        var = states.true_statement.statements[0].left.var
+        mux_output.append(var)
+        while (isinstance(states.false_statement, ast.IfStatement)):
+            states = states.false_statement
+            var = states.true_statement.statements[0].right.var
+            mux_output.append(var)
+        var = states.false_statement.statements[0].right.var
+        mux_output.append(var)
     return mux_output, always
 
                    
-def extrace_always_naming_rule(always, naming_rules, clk_domain, direction):
+def extract_always_naming_rule(always, naming_rules, clk_domain, direction):
     # find not needed true_statement of a statement, using the false_statement to replace 
     #  the statement
     temp_always = copy.deepcopy(always)
@@ -188,6 +208,7 @@ def extrace_always_naming_rule(always, naming_rules, clk_domain, direction):
             else:
                 if isinstance(states.false_statement, ast.IfStatement):
                     states = states.false_statement
+                    parent_states = temp_states
                     temp_states.cond = temp_states.false_statement.cond
                     temp_states.true_statement = temp_states.false_statement.true_statement
                     temp_states.false_statement = temp_states.false_statement.false_statement
@@ -197,7 +218,7 @@ def extrace_always_naming_rule(always, naming_rules, clk_domain, direction):
                     break
     return temp_always, mux_in
     
-def extrace_always_full_name(always, full_name, clk_domain):
+def extract_always_full_name(always, full_name, clk_domain):
     # find not needed true_statement of a statement, using the false_statement to replace 
     #  the statement
     temp_always = copy.deepcopy(always)
@@ -247,7 +268,7 @@ def find_reg_wire_def(var_name, def_list):
             return item
 
 def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_always_list):
-    # extrace ports
+    # extract ports
     sig_ce0 = ''
     sig_we0 = ''
     sig_address0 = ''
@@ -367,7 +388,7 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
         for clk_domain in list(clk_dic.keys()):
             port[8] = clk_domain
             ce_signals = clk_dic[clk_domain]
-            temp_ce_always = extrace_always_full_name(ce_mux_always, ce_signals, clk_domain)
+            temp_ce_always = extract_always_full_name(ce_mux_always, ce_signals, clk_domain)
             temp_port = port[0:6]+[temp_ce_always, ce_signals, clk_domain]
             decl_reg = find_reg_wire_def(temp_port[0].name, DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))
             temp_port[0] = temp_port[0].name+"_"+clk_domain
@@ -434,7 +455,8 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
                     decl_reg_name = sig_mux_always.statement.statements[0].true_statement.statements[0].left.var.name
                     decl_reg = find_reg_wire_def(decl_reg_name, DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))
                     rm_reg_def.append(decl_reg)
-                    temp_sig_always, temp_sig_mux_in = extrace_always_naming_rule(sig_mux_always, naming_rules, clk_domain, "out")
+                    temp_sig_always, temp_sig_mux_out = extract_always_naming_rule(sig_mux_always, naming_rules, clk_domain, "out")
+                    temp_sig_type = "mux"
                     port.append(temp_sig_type)
                     port.append(temp_sig_always)
                     port.append(temp_sig_mux_out)
@@ -473,7 +495,7 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
                     # this is a real mux
                     else:
                         temp_sig_type = "mux"
-                        temp_sig_always, temp_sig_mux_in = extrace_always_naming_rule(sig_mux_always, naming_rules, clk_domain, "in")
+                        temp_sig_always, temp_sig_mux_in = extract_always_naming_rule(sig_mux_always, naming_rules, clk_domain, "in")
                         decl_reg = find_reg_wire_def(port[sig_idx].name, DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))
                         port[sig_idx]=port[sig_idx].name+"_"+clk_domain
                         decl_reg_add = copy.deepcopy(decl_reg)
@@ -690,15 +712,19 @@ def ram_module_clk_bind(top_module_ast, ram_module_list, main_module_list, modul
                     rm_instlist_all.append(item)
                     break
 
+    rm_ram_mux_all = list(set(rm_ram_mux_all))
     for rm_mux in rm_ram_mux_all:
         item_list.remove(rm_mux)
         
+    rm_reg_def_all = list(set(rm_reg_def_all))
     for rm_reg in rm_reg_def_all:
         item_list.remove(rm_reg)
     
+    rm_instlist_all = list(set(rm_instlist_all))
     for rm_item in rm_instlist_all:
         item_list.remove(rm_item)
             
+    add_ram_inst_all = list(set(add_ram_inst_all))
     for add_instance in add_ram_inst_all:
         add_instance_list = ast.InstanceList(add_instance.module, add_instance.parameterlist, [add_instance])
         item_list.append(add_instance_list)

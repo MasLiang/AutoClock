@@ -86,7 +86,10 @@ def clk_domains_map(clk_domains, periods, modules):
     clk_period_map = {}
 
     for i in range(num_domains):
-        module_clk_map[modules[i]] = clk_domains[i]
+        if modules[i] in module_clk_map:
+            module_clk_map[modules[i]].append(clk_domains[i])
+        else:
+            module_clk_map[modules[i]] = [clk_domains[i]]
         clk_period_map[clk_domains[i]] = periods[i]
 
     return clk_period_map, module_clk_map
