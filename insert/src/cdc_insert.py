@@ -858,7 +858,13 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
             # deal with start signals 
             # 1. for FSM_states related condition, sync them
             # 2. pipe FSM
-            # 3. add "ap_done" to the condition for aux
+            # 3. add "ap_done" to the condition for aux, 
+            #       TODO: only for dataflow module? or just check the interface type, no ap_continue
+            #       for these modules, ap_done is determined by ap_start. So if ap_done is used for aux, deadlock.
+            # 4. fix a bug: start will be later than continus.
+            #     But sometimes when the target clock is slower, the sampling time is coincidently at 
+            #     low valtage level. Then start_sync and continue_sync will assert at the same time.
+            #     So, delay the start signal 2 cycle.
             elif "_ap_start_reg" in var:
                 # 1. for FSM_states, sync them
                 eq_async = copy.deepcopy(always.statement.statements[0].false_statement.statements[0].cond)
@@ -866,7 +872,7 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
                 add_assign.append(eq_sync_assign)
                 in_sig = var+"_async_cond"
                 in_clk = fastest_clk
-                out_sig = var+"_sync_cond"
+                out_sig = var+"_sync_cond_pre"
                 _, _, module = connect_to_module(var.replace("_reg",""), main_module_list)
                 out_clk = module_map[module.module]
                 if in_clk==out_clk:
@@ -887,7 +893,7 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
                 sync_decl_wire_start = ast.Decl([ast.Wire(in_sig)])
                 add_decl.append(sync_decl_reg_start)
                 add_decl.append(sync_decl_wire_start)
-                # 2. pipe FSM, here only colect all states need to pipe. 
+                # 2. pipe FSM, here only collect all states need to pipe. 
                 #    pipe will be implemented after the for loop
                 if isinstance(eq_async, ast.Eq):
                     state_to_pipe.append([eq_async.right.name, out_clk])
@@ -903,6 +909,8 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
                 always.sens_list.list[0].sig.name = out_clk
                 #always.sens_list.list[0].sig = out_clk
                 always.statement.statements[0].cond.left.name = "rst_"+out_clk
+                # 4. add a delay circuit.
+                # TODO
 
     for case_item in case_always_list[0].statement.statements[0].caselist:
         if case_item.cond==None:

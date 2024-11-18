@@ -45,7 +45,12 @@ There are some features (Continuously updating)
             CDC circuit
             modified modules
 
-    3. insert clock gates 
+    3. clock multiplexering scheme for modules instantiated by multiple clock domains
+        
+        - insert clock mux to generate a new clock domain
+        - generate selection signals
+
+    4. insert clock gates 
         - from high to low level 
         
         - skip sub-modules of dataflow modules
@@ -55,7 +60,7 @@ There are some features (Continuously updating)
         - based on Xilinx Power Estimator
 
 
-    4. How to run:
+    5. How to run:
         - install packages:
             - pyverilog
 
@@ -65,4 +70,4 @@ There are some features (Continuously updating)
 
         - "make host" to generate host.exe
 
-        - "host.ext -xclbin top.xclbin" to run it on FPGA
+        - "host.exe -xclbin top.xclbin" to run it on FPGA

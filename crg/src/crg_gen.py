@@ -6,6 +6,7 @@ from .template.bufgce_div import *
 from .template.rst_sync import *
 from .clk_domain_analyze import clk_resource_cal
 from .clk_domain_extract import extract_clk_domains
+import math
 import pdb
 
 def crg_gen(file):
@@ -15,6 +16,17 @@ def crg_gen(file):
         return 0, modules, fastest_clk_map, [], {}
         
     clk_map_mux, clk_map_bypass, clk_map_div, clk_map_mmcm, mux_out_domains = clk_resource_cal(domains, modules, domains_sel_if)
+
+    # add mux_out_domains to the fastest_clk_map
+    # in extract clk domains, there is only for user configured mux 
+    # user infered mux should be add here
+    for domain_key in list(mux_out_domains.keys()):
+        domain = mux_out_domains[domain_key]
+        periods = []
+        for sub_domain in clk_map_mux[domain][1]:
+            periods.append(int(domains[sub_domain]))
+        fastest_clk_map.append([domain, int(math.ceil(max(periods)/int(domains[fastest_clk_map[0]])))])
+        
     
     lst_port = []
     lst_assign = []    
@@ -55,14 +67,14 @@ def crg_gen(file):
     lst_bufi_inst.append("(    .O    ("+src_clk+"_ibuf),")
     lst_bufi_inst.append("     .I    ("+src_clk+"));")
 
-    print("clk_map_mux" , clk_map_mux)
-    print("clk_map_bypass" , clk_map_bypass)
-    print("clk_map_div" , clk_map_div)
-    print("clk_map_mmcm" , clk_map_mmcm)
-    print("sel_if:", domains_sel_if)
-    print("module:", modules)
-    print("domains:", domains)
-    print("mux_out:", mux_out_domains)
+    #print("clk_map_mux" , clk_map_mux)
+    #print("clk_map_bypass" , clk_map_bypass)
+    #print("clk_map_div" , clk_map_div)
+    #print("clk_map_mmcm" , clk_map_mmcm)
+    #print("sel_if:", domains_sel_if)
+    #print("module:", modules)
+    #print("domains:", domains)
+    #print("mux_out:", mux_out_domains)
     
     # generate mmcm or pll to generate clks in domains
     for unit_idx in range(len(clk_map_mmcm[src_clk])):
@@ -190,9 +202,7 @@ def crg_gen(file):
     # gen port
     lst_port.append(f'''module {top_module}_crg{'('}''')
     lst_crg_inst.append(f'''{top_module}_crg u_crg(''')
-    for clk in lst_clk:
-        if(clk==src_clk):
-            continue
+    for clk in lst_clk[1:]:
         if clk in domains_sel_if :
             lst_port.append("   input       "+clk+"_"+domains_sel_if[clk][0]+",")
             lst_crg_inst.append(f'''{'    .'+clk+'_'+domains_sel_if[clk][0]:<40}({clk+'_'+domains_sel_if[clk][0]}),''')

@@ -262,4 +262,122 @@ def cg_insert(module_name, root_path, rpt_root_path, cg_max_num, cg_max_level):
             top_flg = 0
         
 
+def cg_insert_random(root_path, cg_max_num, top_name):
+    files = [f for f in os.listdir(root_path) if os.path.isfile(os.path.join(root_path, f))]
+    cg_num = 0
+    while 1:
+        file = random.sample(files, 1)
+        if file[0][-2:]!=".v":
+            continue
+        if file[0][:-2]==top_name:
+            top_flg = 1
+        else:
+            top_flg = 0
+        top_module_ast, _, cg_module_list, main_module_list, _, _, other_module_list, _, case_always_list, _, _, _ = read_file(file[0][:-2], {}, root_path)
+        if len(cg_module_list)==0:
+            if len(case_always_list)>0:
+                for case_always in case_always_list:
+                    if case_always.statement.statements[0].comp.name=="ap_CS_fsm":
+                        cg_insert_result = cg_insert_single_module(file[0][:-2], top_module_ast, root_path, 1, top_flg)
+                        cg_num += cg_insert_result
+                        break
+            else:
+                cg_insert_result = cg_insert_single_module(file[0][:-2], top_module_ast, root_path, 0, top_flg)
+                cg_num += cg_insert_result
+        if cg_num==cg_max_num:
+            break
+ 
+def cg_insert_bfs(module_name, root_path, rpt_root_path, cg_max_num, cg_max_level):
+    pdb.set_trace()
+
+    module_list = [[], []]
+    pi_flg = 0
+    po_flg = 1
+    cg_num = 0
+    cg_level = 0
+    top_module_name_len = len(module_name)
+
+    tmp_latency, tmp_power_saved, module_type= rpt_parser(module_name, rpt_root_path, 0)
+    # name, latency, power_saved
+    module_list[pi_flg].append([module_name, tmp_latency, tmp_power_saved, module_type])
+    top_flg = 1
+
+    while 1:
+        curr_module_list = module_list[pi_flg]
+        nxt_module_list = module_list[po_flg]
+        curr_module_num = len(curr_module_list)
+        nxt_module_num = len(nxt_module_list)
+        if curr_module_num==0 and nxt_module_num==0:
+            break
+
+        for _ in range(curr_module_num):
+            curr_module = curr_module_list.pop(0)
+            if not os.path.exists(root_path+"/"+curr_module[0]+".v"):
+                continue
+            top_module_ast, _, cg_module_list, main_module_list, _, _, other_module_list, _, case_always_list, _, _, _ = read_file(curr_module[0], {}, root_path)
+
+            # if there is not a clock gate
+            # add a gate to this module
+            if len(cg_module_list)==0:
+                if len(case_always_list)>0:
+                    for case_always in case_always_list:
+                        if case_always.statement.statements[0].comp.name=="ap_CS_fsm":
+                            cg_insert_result = cg_insert_single_module(curr_module[0], top_module_ast, root_path, 1, top_flg)
+                            cg_num += cg_insert_result
+                            break
+                else:
+                    cg_insert_result = cg_insert_single_module(curr_module[0], top_module_ast, root_path, 0, top_flg)
+                    cg_num += cg_insert_result
+                    
+            
+            if cg_num==cg_max_num:
+                return 
+
+            for inst in main_module_list+other_module_list:
+                nxt_module_name = inst.module[top_module_name_len+1:]
+                if not os.path.exists(rpt_root_path+"/"+nxt_module_name+"_csynth.rpt"):
+                    continue
+                tmp_latency, tmp_power_saved, module_type = rpt_parser(nxt_module_name, rpt_root_path, curr_module[1])
+                nxt_module_list.append([inst.module, tmp_latency, tmp_power_saved, module_type])
+    
+        cg_level += 1
+        if cg_level==cg_max_level or cg_num==cg_max_num:
+            return 
+        tmp_flg = pi_flg
+        pi_flg = po_flg
+        po_flg = tmp_flg
+        if top_flg==1:
+            top_flg = 0
+        
+def cg_insert_dfs(module_name, root_path, rpt_root_path, cg_max_num, cg_max_level, top_flg=1, cg_level=0, cg_num=0):
+    print(module_name)
+    if os.path.exists(root_path+"/"+module_name+".v"):
+        top_module_ast, _, top_cg_module_list, top_main_module_list, _, _, top_other_module_list, _, top_case_always_list, _, _, _ = read_file(module_name, {}, root_path)
+         # if there is a clock gate
+        if len(top_cg_module_list)==0:
+            undf_flg = 0 # 1: this is a un-dataflow module with FSM
+            if len(top_case_always_list)>0:
+                for case_always in top_case_always_list:
+                    if case_always.statement.statements[0].comp.name=="ap_CS_fsm":
+                        undf_flg = 1
+                        break
+            cg_insert_result = cg_insert_single_module(module_name, top_module_ast, root_path, undf_flg, top_flg)
+            cg_level += 1
+            cg_num += cg_insert_result
+
+        if cg_level==cg_max_level or cg_num==cg_max_num:
+            return cg_num
+
+
+        for inst in top_main_module_list+top_other_module_list:
+            # Why not this file?
+            if not os.path.exists(root_path+"/"+inst.module+".v"):
+                continue
+            cg_num = cg_insert_dfs(inst.module, root_path, rpt_root_path, cg_max_num, cg_max_level, 0, cg_level+1, cg_num)
+            if cg_num==cg_max_num:
+                break
+
+        return cg_num
+    return 0
+
 #cg_insert("top_kernel3_x0", "../../all_ab/dut/solution1/impl/verilog/")

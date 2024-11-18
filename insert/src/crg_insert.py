@@ -57,14 +57,11 @@ def connect_mux_sel(module_name, mux_freq, top_ast, top_path):
     for idx in range(len(state_mux)):
         if (idx==0):
             mux_logic.append("    if ("+state_mux[idx][0]+" | "+state_mux[idx][1]+")")
-            mux_logic.append("    begin")
-            mux_logic.append("        "+module_name+"_clk_sel_reg     =       0;")
-            mux_logic.append("    end")
         else:
             mux_logic.append("    else if ("+state_mux[idx][0]+" | "+state_mux[idx][1]+")")
-            mux_logic.append("    begin")
-            mux_logic.append("        "+module_name+"_clk_sel_reg     =       "+str(idx)+";")
-            mux_logic.append("    end")
+        mux_logic.append("    begin")
+        mux_logic.append("        "+module_name+"_clk_sel_reg     =       "+str(len(state_mux)-idx-1)+";")
+        mux_logic.append("    end")
             
     mux_logic.append("end")
     
@@ -139,12 +136,19 @@ def crg_insert(module_name, root_path, lst_new_module, tdm_modules):
 
 
     # fuse wires
-    top_item_list = top_item_list[0:top_item_idx]+crg_item_list[0:crg_item_idx]+mux_sig_item_list[0:mux_sig_item_idx]+top_item_list[top_item_idx:]
+    if len(mux_sig_item_list)>0:
+        top_item_list = top_item_list[0:top_item_idx]+crg_item_list[0:crg_item_idx]+mux_sig_item_list[0:mux_sig_item_idx]+top_item_list[top_item_idx:]
+    else:
+        top_item_list = top_item_list[0:top_item_idx]+crg_item_list[0:crg_item_idx]+top_item_list[top_item_idx:]
+    
     for top_item_idx in range(len(top_item_list)):
         if isinstance(top_item_list[top_item_idx], ast.InstanceList):
             break
     # fuse instance
-    top_item_list = top_item_list[0:top_item_idx]+crg_item_list[crg_item_idx:]+mux_sig_item_list[mux_sig_item_idx:]+top_item_list[top_item_idx:]
+    if len(mux_sig_item_list)>0:
+        top_item_list = top_item_list[0:top_item_idx]+crg_item_list[crg_item_idx:]+mux_sig_item_list[mux_sig_item_idx:]+top_item_list[top_item_idx:]
+    else:
+        top_item_list = top_item_list[0:top_item_idx]+crg_item_list[crg_item_idx:]+top_item_list[top_item_idx:]
     top_module_def.items = tuple(top_item_list)
     
     # generate new rtl

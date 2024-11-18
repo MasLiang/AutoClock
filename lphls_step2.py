@@ -40,6 +40,7 @@ parser.add_argument("--solution_name", type=str, default="0")
 parser.add_argument("--xo_path", type=str, default="0")
 parser.add_argument("--rdm", type=int, default=0)
 parser.add_argument("--dfs", type=int, default=0)
+parser.add_argument("--bfs", type=int, default=0)
 parser.add_argument("--gate_num", type=int, default=10)
 parser.add_argument("--gate_level", type=int, default=0)
 parser.add_argument("--gate_enable", type=str, default="true")
@@ -54,6 +55,7 @@ cpp_path = args.cpp_path
 xo_path = args.xo_path
 rdm = args.rdm
 dfs = args.dfs
+bfs = args.bfs
 gate_num = args.gate_num
 gate_level = args.gate_level
 gate_enable = args.gate_enable
