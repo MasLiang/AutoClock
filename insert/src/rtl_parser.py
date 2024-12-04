@@ -6,13 +6,18 @@ import copy
 import re
 
 def is_fifo_inst(inst):
-    port_lst = ['clk', 'reset', 'if_read_ce', 'if_write_ce', 'if_din', 'if_full_n', 'if_write', 'if_dout', 'if_empty_n', 'if_read']
+    port_lst = [['clk', 'reset', 'if_read_ce', 'if_write_ce', 'if_din', 'if_full_n', 'if_write', 'if_dout', 'if_empty_n', 'if_read'],['clk', 'reset', 'if_read_ce', 'if_write_ce', 'if_din', 'if_full_n', 'if_write', 'if_dout', 'if_num_data_valid', 'if_fifo_cap', 'if_empty_n', 'if_read']]
     idx = 0
     for port in inst.portlist:
-        if idx>=len(port_lst):
+        if idx>=len(port_lst[1]):
             return False
-        if port.portname!=port_lst[idx]:
-            return False
+        elif idx>=len(port_lst[0]):
+            if port.portname!=port_lst[1][idx]:
+                return False
+        else:
+            if (port.portname!=port_lst[1][idx]) & (port.portname!=port_lst[0][idx]):
+                return False
+            
         idx+=1
     
     return True
@@ -60,6 +65,11 @@ def is_main_axi_module(main_inst):
     for portarg in main_inst.portlist:
         if "axi" in portarg.portname:
             return True
+    return False
+
+def is_proc_module(inst):
+    if "entry_proc" in inst.module:
+        return True
     return False
 
 def is_ddr_controller(inst):
@@ -126,7 +136,7 @@ def read_file(module_name, module_map, root_path):
             axi_module_list.append(inst)
         elif "BUFGCE" == inst.module:
             cg_module_list.append(inst)
-        elif inst.module in list(module_map.keys()):
+        elif inst.module in list(module_map.keys()) or is_proc_module(inst):
             main_module_list.append(inst)
         elif is_fifo_inst(inst):
             fifo_module_list.append(inst)
