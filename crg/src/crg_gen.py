@@ -7,7 +7,6 @@ from .template.rst_sync import *
 from .clk_domain_analyze import clk_resource_cal
 from .clk_domain_extract import extract_clk_domains
 import math
-import pdb
 
 def crg_gen(file):
     modules, domains, domains_sel_if, fastest_clk_map= extract_clk_domains(file)

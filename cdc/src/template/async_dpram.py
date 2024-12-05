@@ -124,8 +124,6 @@ def gen_async_bram_inst(module_name, inst_name, port_dic, factors):
 
     port0 = port_dic[list(port_dic.keys())[0]]
     port1 = port_dic[list(port_dic.keys())[1]]
-    print(port0)
-    print(port1)
 
     lst_inst = []
     lst_inst.append("module "+module_name+"(")
