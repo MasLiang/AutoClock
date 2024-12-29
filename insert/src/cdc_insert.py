@@ -473,10 +473,7 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
             else:
                 # 4 is output of the bram, others are input
                 if sig_idx==4:
-<<<<<<< HEAD
-=======
                     #pdb.set_trace()
->>>>>>> 15d1fc3 (add cg_pipe / if / arst  feature)
                     sig_mux_always = find_mux_out(port[sig_idx], mux_always_list, clk_domain)
                     decl_reg_name = port[sig_idx].name
                     decl_reg = find_reg_wire_def(decl_reg_name, DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))

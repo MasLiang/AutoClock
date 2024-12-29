@@ -46,8 +46,6 @@ def is_ram_1wr2r_inst(inst):
     
     return True
 
-<<<<<<< HEAD
-=======
 def is_ram_1wr2wr_inst(inst):
     port_lst = ["clk", "reset", "address0", "ce0", "we0", "d0", "q0", "address1", "ce1", "we1", "d1", "q1"]
     idx = 0
@@ -61,7 +59,6 @@ def is_ram_1wr2wr_inst(inst):
     return True
 
 
->>>>>>> 15d1fc3 (add cg_pipe / if / arst  feature)
 def is_ram_1r2w_inst(inst):
     port_lst = ["clk", "reset", "address0", "ce0", "q0", "address1", "ce1", "we1", "d1"]
     idx = 0
