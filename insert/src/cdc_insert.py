@@ -326,6 +326,7 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
         port_list.append([sig_ce1, sig_we1, sig_address1, sig_d1, sig_q1])
     
     # check connections of ce
+    #pdb.set_trace()
     
     for port in port_list:
         # check which module port connect directly, this port should nor be touched
@@ -442,9 +443,14 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
                 continue
 
             sig = port[sig_idx].name
-            # must connect to a module directly
-            flag, portarg, _ = connect_to_module(port[sig_idx], main_module_list)
+            flag, portarg, module = connect_to_module(port[sig_idx], main_module_list)
+            #pdb.set_trace()
             if flag:
+                # other ports need to be in the same clock domain
+                if module_map[module.module]!=clk_domain:
+                    port[sig_idx] = ""  
+                    continue
+                # connect to a module directly
                 for naming_rule in naming_rules:
                     sig_match = re.search(naming_rule, portarg.portname)
                     if sig_match:
@@ -467,6 +473,10 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
             else:
                 # 4 is output of the bram, others are input
                 if sig_idx==4:
+<<<<<<< HEAD
+=======
+                    #pdb.set_trace()
+>>>>>>> 15d1fc3 (add cg_pipe / if / arst  feature)
                     sig_mux_always = find_mux_out(port[sig_idx], mux_always_list, clk_domain)
                     decl_reg_name = port[sig_idx].name
                     decl_reg = find_reg_wire_def(decl_reg_name, DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))
@@ -485,6 +495,11 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
                     rm_reg_def.append(decl_reg)
                     # this is a data gate
                     if len(sig_mux_in)==1:
+                        flag, _, module = connect_to_module(sig_mux_in[0].name, main_module_list)
+                        if flag:
+                            if module_map[module.module]!=clk_domain:
+                                port[sig_idx] = ""  
+                                continue
                         for naming_rule in naming_rules:
                             sig_match = re.search(naming_rule, sig_mux_in[0].name)
                             if sig_match:

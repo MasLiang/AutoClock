@@ -2,6 +2,11 @@ from crg.src.crg_gen import *
 from insert.src.cdc_insert import *
 from insert.src.crg_insert import *
 from insert.src.cg_insert import *
+<<<<<<< HEAD
+=======
+from insert.src.cg_pipe_insert import *
+from insert.src.if_mdf import *
+>>>>>>> 15d1fc3 (add cg_pipe / if / arst  feature)
 import os
 import argparse
 import re
@@ -44,6 +49,11 @@ parser.add_argument("--bfs", type=int, default=0)
 parser.add_argument("--gate_num", type=int, default=10)
 parser.add_argument("--gate_level", type=int, default=0)
 parser.add_argument("--gate_enable", type=str, default="true")
+<<<<<<< HEAD
+=======
+parser.add_argument("--done_reg", type=str, default="false")
+parser.add_argument("--cg_pipe_en", type=str, default="false")
+>>>>>>> 15d1fc3 (add cg_pipe / if / arst  feature)
 args = parser.parse_args()
 
 root_path = args.root_path
@@ -59,39 +69,62 @@ bfs = args.bfs
 gate_num = args.gate_num
 gate_level = args.gate_level
 gate_enable = args.gate_enable
+<<<<<<< HEAD
+=======
+done_flg = args.done_reg
+cg_pipe_en = args.cg_pipe_en
+>>>>>>> 15d1fc3 (add cg_pipe / if / arst  feature)
 
 if cpp_path=="0":
     cpp_path = root_path+"kernel/"
 syn_rtl_path = proj_path+"/"+proj_name+"/"+solution_name+"/syn/verilog/"
 rpt_root_path = proj_path+"/"+proj_name+"/"+solution_name+"/syn/report/"
 
-# backup dut.cpp since after parser, it will be changed so that
-# VITIS_HLS can read it. After VITIS_HLS read it, it should be restored
 os.system("cp "+cpp_path+cpp_top_name+"_backup.cpp "+cpp_path+cpp_top_name+".cpp")
 
+<<<<<<< HEAD
 # parser HLS to generate crg
 flg, module_map, fastest_clk_map, lst_new_module, tdm_modules = crg_gen(cpp_path+cpp_top_name+".cpp")
 
 # temp delete "synthesis translate_off"
+=======
+flg, module_map, fastest_clk_map, lst_new_module, tdm_modules = crg_gen(cpp_path+cpp_top_name+".cpp")
+
+>>>>>>> 15d1fc3 (add cg_pipe / if / arst  feature)
 temp_deal(syn_rtl_path+proj_name+".v")
 
-# insert cdc circuit and do some modification
 if flg==1:
+<<<<<<< HEAD
     cdc_insert(proj_name, module_map, fastest_clk_map, syn_rtl_path)
 
     # insert crg
     crg_insert(proj_name, syn_rtl_path, lst_new_module, tdm_modules)
 
 # insert clock gate
+=======
+    cdc_insert(proj_name, module_map, fastest_clk_map, syn_rtl_path, rpt_root_path)
+
+    crg_insert(proj_name, syn_rtl_path, lst_new_module, tdm_modules)
+
+if done_flg=="true":
+    if_mdf(syn_rtl_path)
+
+>>>>>>> 15d1fc3 (add cg_pipe / if / arst  feature)
 if gate_enable=="true":
     if rdm:
         cg_insert_random(syn_rtl_path, gate_num, "top")
     elif dfs:
         cg_insert_dfs(proj_name, syn_rtl_path, rpt_root_path, gate_num, gate_level)
     else:
+<<<<<<< HEAD
         cg_insert(proj_name, syn_rtl_path, rpt_root_path, gate_num, gate_level)
+=======
+        if cg_pipe_en=="true":
+            cg_pipe_insert(proj_name, syn_rtl_path, rpt_root_path, gate_num, gate_level)
+        else:
+            cg_insert(proj_name, syn_rtl_path, rpt_root_path, gate_num, gate_level)
+>>>>>>> 15d1fc3 (add cg_pipe / if / arst  feature)
 
-# generate a tcl file 
 with open(proj_path+'/run_hls.tcl', 'w') as f:
     f.write("open_project "+proj_name)
     f.write("\n")
@@ -101,7 +134,6 @@ with open(proj_path+'/run_hls.tcl', 'w') as f:
     f.write("\n")
     f.write("exit")
 
-#using VITIS_HLS to generate Verilog
 os.chdir(proj_path)
 os.system("vitis-run --mode hls --tcl run_hls.tcl")
 os.chdir(root_path)

@@ -17,11 +17,18 @@ def determain_cgen(top_module_ast, top_flg):
     #     else if(ap_done)
     #           cgen_pre        <=      1'b0;
     # end
+<<<<<<< HEAD
     ## ap_done_reg will be triggered by "continue" outside,  and at that time, the module is idld
     ## So the clock should open for "ap_done_reg"
     # cgen = cgen_pre | ap_start | ap_done | ap_reset;
 
     done_pattern = r'ap_done'
+=======
+    ## ap_done_reg will be triggered by "continue" outside,  and at that time, the module is idle
+    ## So the clock should open for "ap_done_reg"
+    # cgen = cgen_pre | ap_start | ap_reset | ap_done;
+
+>>>>>>> 15d1fc3 (add cg_pipe / if / arst  feature)
     start_pattern = r'ap_start'
     all_output = DFS(top_module_ast, lambda node : isinstance(node, ast.Output))
     all_input = DFS(top_module_ast, lambda node : isinstance(node, ast.Input))
@@ -31,6 +38,7 @@ def determain_cgen(top_module_ast, top_flg):
         match = re.search(start_pattern, start_sig.name)
         if match:
             ap_start_flg = 1
+<<<<<<< HEAD
     for done_sig in all_output:
         match = re.search(done_pattern, done_sig.name)
         if match:
@@ -39,6 +47,12 @@ def determain_cgen(top_module_ast, top_flg):
     if top_flg:
         cgen = "ap_start | ap_rst_n_inv | ap_done"
     elif ap_start_flg and ap_done_flg: 
+=======
+
+    if top_flg:
+        cgen = "ap_start | ap_rst_n_inv | ap_done"
+    elif ap_start_flg: 
+>>>>>>> 15d1fc3 (add cg_pipe / if / arst  feature)
         cgen = "ap_start | ap_rst | ap_done"
     else:
         cgen = ""
@@ -158,6 +172,7 @@ def rpt_parser(module_name, rpt_root_path, pre_latency):
     latency_flg = 0
     resource_type_flg = 0
     
+<<<<<<< HEAD
 
     latency_head_pattern = r'\s*\|\s*Latency \(cycles\)\s*\|\s*Latency \(absolute\)\s*\|\s*Interval\s*\|\s*Pipeline\s*\|'
     resource_head_pattern = '== Utilization Estimates'
@@ -379,5 +394,110 @@ def cg_insert_dfs(module_name, root_path, rpt_root_path, cg_max_num, cg_max_leve
 
         return cg_num
     return 0
+=======
+
+    latency_head_pattern = r'\s*\|\s*Latency \(cycles\)\s*\|\s*Latency \(absolute\)\s*\|\s*Interval\s*\|\s*Pipeline\s*\|'
+    resource_head_pattern = '== Utilization Estimates'
+    for line_idx in range(len(lines)):
+        if not latency_flg:
+            match = re.match(latency_head_pattern, lines[line_idx])
+            if match:
+                latency_flg = 1
+                latency_line_idx = line_idx + 3
+                latency_line = lines[latency_line_idx].replace(" ", "").split("|")
+                if latency_line[1]=="?":
+                    latency = 1
+                else:
+                    latency = int(latency_line[1])
+                if latency_line[7]=="?":
+                    module_type = "ndf"
+                elif latency_line[7]=="no":
+                    module_type = "ndf"
+                else:
+                    module_type = "df"
+                    
+        elif not resource_type_flg:
+            match = re.match(resource_head_pattern, lines[line_idx])
+            if match:
+                resource_type_flg = 1
+                resource_type_line_idx =  line_idx + 4
+                resource_type = lines[resource_type_line_idx].replace(" ", "").split("|")[2:-1]
+        else:
+            match = re.match(r"\s*\|Total\s*", lines[line_idx])
+            if match:
+                resource_num = lines[line_idx].replace(" ", "").split("|")[2:-1]
+                break
+
+    
+    power = 0
+    for resource_idx in range(len(resource_type)):
+        power += power_table[resource_type[resource_idx]] * int(resource_num[resource_idx]) 
+    
+    if pre_latency==0:
+        return latency, 0, module_type
+    power_saved = power * (1- latency / pre_latency)
+    
+    return latency, power_saved, module_type
+
+def cg_insert(module_name, root_path, rpt_root_path, cg_max_num, cg_max_level):
+
+    module_list = [[], []]
+    pi_flg = 0
+    po_flg = 1
+    cg_num = 0
+    cg_level = 0
+    top_module_name_len = len(module_name)
+
+    tmp_latency, tmp_power_saved, module_type= rpt_parser(module_name, rpt_root_path, 0)
+    # name, latency, power_saved
+    module_list[pi_flg].append([module_name, tmp_latency, tmp_power_saved, module_type])
+    top_flg = 1
+
+    while 1:
+        curr_module_list = module_list[pi_flg]
+        nxt_module_list = module_list[po_flg]
+        curr_module_num = len(curr_module_list)
+        nxt_module_num = len(nxt_module_list)
+        if curr_module_num==0 and nxt_module_num==0:
+            break
+
+        # sort
+        curr_module_list.sort(key=lambda md : md[2])
+        for _ in range(curr_module_num):
+            curr_module = curr_module_list.pop(-1)
+            if not os.path.exists(root_path+"/"+curr_module[0]+".v"):
+                continue
+            top_module_ast, _, cg_module_list, main_module_list, _, _, other_module_list, _, case_always_list, _, _, _ = read_file(curr_module[0], {}, root_path)
+
+            # if there is not a clock gate
+            # add a gate to this module
+            if len(cg_module_list)==0:
+                    cg_insert_result = cg_insert_single_module(curr_module[0], top_module_ast, root_path, top_flg)
+                    cg_num += cg_insert_result
+                    
+            
+            if cg_num==cg_max_num:
+                return 
+
+            if curr_module[3]=="df":
+                continue
+
+            for inst in main_module_list+other_module_list:
+                nxt_module_name = inst.module[top_module_name_len+1:]
+                if not os.path.exists(rpt_root_path+"/"+nxt_module_name+"_csynth.rpt"):
+                    continue
+                tmp_latency, tmp_power_saved, module_type = rpt_parser(nxt_module_name, rpt_root_path, curr_module[1])
+                nxt_module_list.append([inst.module, tmp_latency, tmp_power_saved, module_type])
+    
+        cg_level += 1
+        if cg_level==cg_max_level or cg_num==cg_max_num:
+            return 
+        tmp_flg = pi_flg
+        pi_flg = po_flg
+        po_flg = tmp_flg
+        if top_flg==1:
+            top_flg = 0
+        
+>>>>>>> 15d1fc3 (add cg_pipe / if / arst  feature)
 
 #cg_insert("top_kernel3_x0", "../../all_ab/dut/solution1/impl/verilog/")
