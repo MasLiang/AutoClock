@@ -172,14 +172,15 @@ def pll_mmcm_cal(domains):
             elif v.name=="n_mmcm":
                 num_mmcm = int(v.varValue)
         # power of current solution
-        p_min = num_pll*device_info[2]+n_mmcm*device_info[3]
+        p_min = num_pll*device_info[2]+num_mmcm*device_info[3]
 
         lst_domains = list(domains.keys())
         if num_mmcm==0:
             mmcm_map = pll_multi_calc_fac(domains, num_pll)
             if mmcm_map=={}:
                 # add new constraint
-                ilp_solver += n_pll*device_info[2] + n_mmcm*device_info[3] > p_min
+                # the precision is 0.001,so 0.00001 is OK
+                ilp_solver += n_pll*device_info[2] + n_mmcm*device_info[3] >= p_min+0.00001
                 continue
             else:
                 return mmcm_map
@@ -187,7 +188,8 @@ def pll_mmcm_cal(domains):
             mmcm_map = mmcm_multi_calc_fac(domains, num_mmcm)
             if mmcm_map=={}:
                 # add new constraint
-                ilp_solver += n_pll*device_info[2] + n_mmcm*device_info[3] > p_min
+                # the precision is 0.001,so 0.00001 is OK
+                ilp_solver += n_pll*device_info[2] + n_mmcm*device_info[3] >= p_min+0.00001
                 continue
             else:
                 return mmcm_map
@@ -205,13 +207,14 @@ def pll_mmcm_cal(domains):
                     domains_pll[domain] = domains[domain]
                 for domain in lst_domains_mmcm:
                     domains_mmcm[domain] = domains[domain]
-                pll_map = pll_multi_calc_fac(domains_pll)
-                mmcm_map = mmcm_multi_calc_fac(domains_mmcm)
+                pll_map = pll_multi_calc_fac(domains_pll, num_pll)
+                mmcm_map = mmcm_multi_calc_fac(domains_mmcm, num_mmcm)
                 if pll_map=={} or mmcm_map=={}:
                     continue
                 mmcm_map[lst_domains[0]] += pll_map[lst_domains[0]]
                 return mmcm_map
-            ilp_solver += n_pll*device_info[2] + n_mmcm*device_info[3] > p_min
+            # the precision is 0.001,so 0.00001 is OK
+            ilp_solver += n_pll*device_info[2] + n_mmcm*device_info[3] >= p_min+0.00001
             continue
 
 def clk_resource_cal(domains, modules, domains_sel_if):
