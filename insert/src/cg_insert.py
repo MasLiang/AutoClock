@@ -6,6 +6,7 @@ import copy
 import re
 import random
 from .rtl_parser import *
+import pdb
 
 def determain_cgen(top_module_ast, top_flg):
     # always @(posedge clk)
@@ -14,27 +15,40 @@ def determain_cgen(top_module_ast, top_flg):
     #           cgen_pre        <=      1'b0;
     #     else if(ap_start)
     #           cgen_pre        <=      1'b1;
-    #     else if(ap_done)
+    #     else if(!ap_done)
     #           cgen_pre        <=      1'b0;
     # end
     ## ap_done_reg will be triggered by "continue" outside,  and at that time, the module is idle
     ## So the clock should open for "ap_done_reg"
-    # cgen = cgen_pre | ap_start | ap_reset | ap_done;
+    # cgen = cgen_pre | ap_start | ap_reset;
 
     start_pattern = r'ap_start'
-    all_output = DFS(top_module_ast, lambda node : isinstance(node, ast.Output))
     all_input = DFS(top_module_ast, lambda node : isinstance(node, ast.Input))
+    all_Decl = DFS(top_module_ast, lambda node : isinstance(node, ast.Decl))
     ap_idle_flg = 0
     ap_start_flg = 0
+    ap_start_d_lst = []
     for start_sig in all_input:
-        match = re.search(start_pattern, start_sig.name)
-        if match:
+        #pdb.set_trace() 
+        if "ap_start"==start_sig.name:
             ap_start_flg = 1
+    for start_d_sig in all_Decl:
+        if "ap_start_d_" in start_d_sig.list[0].name:
+            ap_start_d_lst.append(start_d_sig.list[0].name)
 
+    if ap_start_d_lst==[]:
+        if ap_start_flg==1:
+            start_sig = "ap_start"
+        else:
+            start_sig = ""
+    else:
+        ap_start_d_lst.sort()
+        start_sig = ap_start_d_lst[0]
+            
     if top_flg:
-        cgen = "ap_start | ap_rst_n_inv | ap_done"
+        cgen = start_sig+" | ap_rst_n_inv"
     elif ap_start_flg: 
-        cgen = "ap_start | ap_rst | ap_done"
+        cgen = start_sig+" | ap_rst"
     else:
         cgen = ""
     return cgen
@@ -126,7 +140,7 @@ def cg_inst_gen(inst_name, cgen, top_flg):
     cg_list.append("    cgen_pre        <=      1'b0;")
     cg_list.append("else if(ap_start)")
     cg_list.append("    cgen_pre        <=      1'b1;")
-    cg_list.append("else if(ap_done)")
+    cg_list.append("else if(!ap_done)")
     cg_list.append("    cgen_pre        <=      1'b0;")
     cg_list.append("end")
     cg_list.append("assign      cgen = "+cgen+" | cgen_pre;\n")

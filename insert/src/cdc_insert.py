@@ -1064,9 +1064,9 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
             #     So, delay the start signal 2 cycle.
             elif "_ap_start_reg" in var:
                 # 1. for FSM_states, sync them
+                # 2025.1.3 fix a bug, not all need to sync. Choose needed
                 eq_async = copy.deepcopy(always.statement.statements[0].false_statement.statements[0].cond)
                 eq_sync_assign = ast.Assign(ast.Lvalue(ast.Identifier(var+"_async_cond")), ast.Rvalue(eq_async))
-                add_assign.append(eq_sync_assign)
                 in_sig = var+"_async_cond"
                 in_clk = fastest_clk
                 out_sig = var+"_sync_cond_pre"
@@ -1078,6 +1078,7 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
                     #always.sens_list.list[0].sig = in_clk
                     always.statement.statements[0].cond.left.name = "rst_"+in_clk
                     continue
+                add_assign.append(eq_sync_assign)
                 gen_async_pulse_inst("async_inst_"+in_sig, in_sig, in_clk, out_sig, out_clk)
                 async_inst_ast, _ = rtl_parse(["./async_inst_"+in_sig+"_inst.v"])
                 os.system("rm async_inst_"+in_sig+"_inst.v")
@@ -1160,7 +1161,41 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
                                                                                ast.Block([ast.BlockingSubstitution(ast.Identifier("ap_NS_fsm"),
                                                                                                                    ast.Identifier(case_item.cond[0].name))]))]) 
                 case_item.statement.statements = tuple([temp_statement])
-                
+     # 2025.1.3: states not only need pipe, but also need to sync for ce/we/... mux
+    pdb.set_trace()
+    for state in state_to_pipe:
+        state_name = state[0]
+        state_clk = state[1]
+        match_state = re.search(r'(\w+)(\d+)', state_name)
+        if match_state:
+            state_idx = match_state.group(2)
+            state_idx_to_sync = int(state_idx)+1
+            state_to_sync = match_state.group(1)+str(state_idx_to_sync)
+            gen_async_level_inst("async_inst_"+state_to_sync, state_to_sync, fastest_clk, state_to_sync+"_sync", state_clk)
+            async_inst_ast, _ = rtl_parse(["./async_inst_"+state_to_sync+"_inst.v"])
+            os.system("rm async_inst_"+state_to_sync+"_inst.v")
+            new_instance_list = DFS(async_inst_ast, lambda node : isinstance(node, ast.InstanceList))
+            for new_inst_list in new_instance_list:
+                break
+            add_async_inst.append(new_inst_list)
+            add_decl.append(ast.Decl([ast.Wire(state_to_sync+"_sync")]))
+       
+            for always in DFS(top_module_ast, lambda node : isinstance(node, ast.Always)):
+                if always.sens_list.list[0].type == "all":
+                    statement = always.statement.statements[0]
+                    if isinstance(statement, ast.IfStatement):
+                        if isinstance(statement.cond, ast.Eq):
+                            if isinstance(statement.cond.right, ast.Identifier):
+                                if statement.cond.right.name==state_to_sync:
+                                    statement.cond.right.name=state_to_sync+"_sync"
+                                    always.show()
+                                    continue
+                                else:
+                                    if isinstance(statement.false_statement, ast.IfStatement):
+                                        if statement.false_statement.cond.right.name==state_to_sync:
+                                            statement.false_statement.cond.right.name=state_to_sync+"_sync"
+                                            always.show()
+                                            continue
                 
     # deal with ap_continue
     # since ap_continue is a pulse, it need to be delayed to longer

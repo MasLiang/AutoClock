@@ -14,12 +14,12 @@ def determain_pipe_cgen(top_module_ast, top_flg):
     #           cgen_pre        <=      1'b0;
     #     else if(ap_start)
     #           cgen_pre        <=      1'b1;
-    #     else if(ap_done_d[2])
+    #     else if(!ap_done_d[2])
     #           cgen_pre        <=      1'b0;
     # end
     ## ap_done_reg will be triggered by "continue" outside,  and at that time, the module is idld
     ## So the clock should open for "ap_done_reg", thus delay 3 cycles
-    # cgen = cgen_pre | ap_start | ap_reset | ap_done_d[2];
+    # cgen = cgen_pre | ap_start | ap_reset;
 
     start_pattern = r'ap_start'
     all_output = DFS(top_module_ast, lambda node : isinstance(node, ast.Output))
@@ -32,9 +32,9 @@ def determain_pipe_cgen(top_module_ast, top_flg):
             ap_start_flg = 1
 
     if top_flg:
-        cgen = "ap_start | ap_rst_n_inv | ap_done_d[2]"
+        cgen = "ap_start | ap_rst_n_inv"
     elif ap_start_flg: 
-        cgen = "ap_start | ap_rst | ap_done_d[2]"
+        cgen = "ap_start | ap_rst"
     else:
         cgen = ""
     return cgen
@@ -141,7 +141,7 @@ def cg_pipe_inst_gen(inst_name, cgen, top_flg):
     cg_list.append("    cgen_pre        <=      1'b0;")
     cg_list.append("else if(ap_start)")
     cg_list.append("    cgen_pre        <=      1'b1;")
-    cg_list.append("else if(ap_done_d[2])")
+    cg_list.append("else if(!ap_done_d[2])")
     cg_list.append("    cgen_pre        <=      1'b0;")
     cg_list.append("end")
     cg_list.append("assign      cgen = "+cgen+" | cgen_pre;\n")

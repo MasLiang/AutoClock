@@ -83,7 +83,7 @@ if flg==1:
     crg_insert(proj_name, syn_rtl_path, lst_new_module, tdm_modules)
 
 if done_flg=="true":
-    if_mdf(syn_rtl_path, 1)
+    if_mdf(syn_rtl_path, proj_name, 1, 10)
 
 if gate_enable=="true":
     if rdm:
