@@ -5,7 +5,7 @@ CRG.pdf illustrates an example of the output of AutoCLock.
 
 There are some features (Continuously updating)
     
-    1. generate CRG automatically. (done)
+    1. generate CRG automatically.
     
         - PLL/MMCM/BUFGCE_DIV selection automatically
             e.g., 
@@ -27,7 +27,7 @@ There are some features (Continuously updating)
             Wrapper of MMCM if MMCM is used
             CRG module
 
-    2. generate CDC circuit automatically according to INTERFACE type. (done)
+    2. generate CDC circuit automatically according to INTERFACE type.
         
         - insert CDC circuits between different clock domain
             The CDC circuit selection depends on the INTERFACE type. 
@@ -46,8 +46,8 @@ There are some features (Continuously updating)
             modified modules
 
     3. clock multiplexering scheme for modules instantiated by multiple clock domains
-        
         - insert clock mux to generate a new clock domain
+
         - generate selection signals
 
     4. insert clock gates 
@@ -58,7 +58,8 @@ There are some features (Continuously updating)
               father module.
         
         - based on Xilinx Power Estimator
-
+    
+    4. modify the interface to increase the maximum frequency
 
     5. How to run:
         - install packages:
