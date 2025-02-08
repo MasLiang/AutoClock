@@ -1,8 +1,8 @@
 #import device_resource
 import pulp
 import itertools
-from .mmcm_fac_calc import *
-from .pll_fac_calc import *
+from .mmcm_fac_calc_test import *
+from .pll_fac_calc_test import *
 
 def bufgce_div_cal(domains):
     # This function is to find those clocks that can be 
@@ -142,6 +142,19 @@ def bypass_cal(domains):
     
     return clk_map, domains
    
+def valid(domains):
+    dom2valid = []
+    for domain in list(domains.keys()):
+        dom2valid.append([domain, domains[domain]])
+    mmcm_map = pll_multi_calc_fac(dom2valid, len(list(domains.keys()))-1)
+    if mmcm_map != {}:
+        return True
+    mmcm_map = mmcm_multi_calc_fac(dom2valid, len(list(domains.keys()))-1)
+    if mmcm_map != {}:
+        return True
+    return False
+    
+
 def pll_mmcm_cal(domains):
     # this function is to calculate the number of PLL and MMCM needed
     # A PLL can generate 2 clock domains and A MMCM can generate 7 clock domains
@@ -156,6 +169,11 @@ def pll_mmcm_cal(domains):
     
     # device_info = [pll_number, mmcm_number, pll_power, mmcm_power, num_clock_per_pll, num_clock_per_mmcm]
     device_info = [100, 100, 0.049, 0.099, 2, 7]
+
+    # validate that all freq can be generated from MMCM/PLL
+    if not valid(domains):
+        assert "aaaaaa"
+        return
 
     ilp_solver = pulp.LpProblem("pll_mmcm_ilp", sense=pulp.LpMinimize)
     n_pll = pulp.LpVariable('n_pll', lowBound=0, upBound=device_info[0], cat=pulp.LpInteger)
@@ -176,19 +194,20 @@ def pll_mmcm_cal(domains):
 
         lst_domains = list(domains.keys())
         if num_mmcm==0:
-            mmcm_map = pll_multi_calc_fac(domains, num_pll)
+            domains_pll = [[_,domains[_]] for _ in list(domains.keys())]
+            mmcm_map = pll_multi_calc_fac(domains_pll, num_pll)
             if mmcm_map=={}:
                 # add new constraint
-                # the precision is 0.001,so 0.00001 is OK
+                # our precision is 0.001,so 0.00001 is OK
                 ilp_solver += n_pll*device_info[2] + n_mmcm*device_info[3] >= p_min+0.00001
                 continue
             else:
                 return mmcm_map
         elif num_pll==0:
-            mmcm_map = mmcm_multi_calc_fac(domains, num_mmcm)
+            domains_mmcm = [[_,domains[_]] for _ in list(domains.keys())]
+            mmcm_map = mmcm_multi_calc_fac(domains_mmcm, num_mmcm)
             if mmcm_map=={}:
                 # add new constraint
-                # the precision is 0.001,so 0.00001 is OK
                 ilp_solver += n_pll*device_info[2] + n_mmcm*device_info[3] >= p_min+0.00001
                 continue
             else:
@@ -196,24 +215,23 @@ def pll_mmcm_cal(domains):
         else:
             # TODO: need to validate all combinations
             #all_combinations = list(itertools.permutations(my_list))
-            for comb in itertools.permutations(lst_domains):
+            for comb in itertools.permutations(lst_domains[1:]):
                 lst_domains_pll = comb[1:2*num_pll+1]
                 lst_domains_mmcm = comb[2*num_pll+1:]
-                domains_pll = {}
-                domains_mmcm = {}
-                domains_pll[lst_domains[0]] = domains[lst_domains[0]]
-                domains_mmcm[lst_domains[0]] = domains[lst_domains[0]]
+                domains_pll = []
+                domains_mmcm = []
+                domains_pll.append([lst_domains[0], domains[lst_domains[0]]])
+                domains_mmcm.append([lst_domains[0], domains[lst_domains[0]]])
                 for domain in lst_domains_pll:
-                    domains_pll[domain] = domains[domain]
+                    domains_pll.append([domain, domains[domain]])
                 for domain in lst_domains_mmcm:
-                    domains_mmcm[domain] = domains[domain]
+                    domains_mmcm.append([domain, domains[domain]])
                 pll_map = pll_multi_calc_fac(domains_pll, num_pll)
                 mmcm_map = mmcm_multi_calc_fac(domains_mmcm, num_mmcm)
                 if pll_map=={} or mmcm_map=={}:
                     continue
                 mmcm_map[lst_domains[0]] += pll_map[lst_domains[0]]
                 return mmcm_map
-            # the precision is 0.001,so 0.00001 is OK
             ilp_solver += n_pll*device_info[2] + n_mmcm*device_info[3] >= p_min+0.00001
             continue
 

@@ -1,81 +1,101 @@
 import math
 
-def mmcm_calc_first_factor(in_period, out_period):
-    # This list is as this format: [[div_fac_all, mult_fac_all, [div_fac_clk1]]...]
-    lst_fac = []
-    for div_fac_all in range(1,106+1):
-        for mult_fac_all in range(16,512+1): # 2~64, stride is 0.125
-            for div_fac_clk in range(1,128+1):
-                if((out_period * (mult_fac_all/8) / div_fac_all / div_fac_clk)==in_period):
-                    lst_fac.append([div_fac_all, (mult_fac_all/8), div_fac_clk])
-    return lst_fac
-
-def mmcm_calc_later_factor(in_period, out_period, lst_factor):
-    # This list is made of two list
-    #   1. factor for all output clk: [[div_fac_all, mult_fac_all,[div_fac_clk1, div_fac_clk2, ...]]
-    selected_lst_factor = []
-    for fac_grp in lst_factor:
-        for div_fac_clk in range(1,128+1):
-            if((out_period * fac_grp[1] / fac_grp[0] / div_fac_clk)==in_period):
-                selected_lst_factor.append([fac_grp[0], fac_grp[1]]+fac_grp[2:]+[div_fac_clk])
-                continue
-    
-    return selected_lst_factor
-
-def mmcm_single_calc_fac(in_period, out_period):
-    # This function is used to calculate MMCM factor.
+def mmcm_calc_fac(in_period, out_period):
+    # This function is used to calculate factor of a single MMCM.
     # Mux out frequency number is 7.
-    # If output is [], this mmcm can not be gen.
-    lst_factor =   mmcm_calc_first_factor(in_period, out_period[0])
-    if(len(lst_factor)==0):
-        return []
-    if(len(out_period)==1):
-        return lst_factor[0]
+    # If output is [], this MMCM can not be gen.
+
+    # a = f_in * fac_mult_all
+    # b = a / fac_div_all
+    # for each k, fk = b / fac_div_k
+    #
+    # however, input is period rather than freq, so:
+    # a = 1 / p_in * fac_mult_all
+    # b = a / fac_div_all
+    # for each k, pk = fac_div_k / b 
+
+    # b = fac_div_k / pk
+    # for max pk, max b is 128/pk_max
+    # for min pk, min b is 1/pk_min
+    # 1/pk_min shoud < 128/pk_max
+    # 128 pk_min > pk_max
+    min_period = min(out_period)
+    min_128period = 128 * min_period 
+    max_period = max(out_period) 
+
+    if min_128period < max_period:
+       return [] 
+
+    b_1_lst = [max_period/_ for _ in range(1,128+1) if (max_period/_ <= min_period and all(out_p%(max_period/_)==0 for out_p in out_period))]
     
-    for clk_idx in range(1,len(out_period)):
-        lst_factor = mmcm_calc_later_factor(in_period, out_period[clk_idx], lst_factor)
-        if(len(lst_factor)==0):
-            return  []
+    # 1/a = 1/b / fac_div_all
+    # for a given 1/b, 1/b/106 < 1/a < 1/b
+    # 1/a = p_in / fac_mult_all
+    # for a given p_in, p_in / 64 < 1/a < p_pin
+    for b_1 in b_1_lst:
+        a_1_low_from_p = in_period / 64
+        a_1_high_from_p = in_period
+        a_1_lst = [b_1/_ for _ in range(1,16+1) if (b_1/_<a_1_high_from_p and b_1/_>a_1_low_from_p and in_period*8%(b_1/_)==0)]
+        # This list is made of two list
+        #   1. factor for all output clk: [[div_fac_all, mult_fac_all,[div_fac_clk1, div_fac_clk2, ...]]
+        if len(a_1_lst)!=0:
+            a_1 = a_1_lst[0]
+            lst_fac = [b_1//a_1, in_period//a_1, [_/b_1 for _ in out_period]]
+            return lst_fac
 
-    return lst_factor[0]
+    if len(out_period)==1:
+        assert "aaaa"
+    # this two freq can not be generated from one MMCM
+    return []
+    
+def partition_in_order(domains, n):
+    # group clock domains to n groups, n is the number of MMCMs
+    m = len(domains)
+    results = []
 
+    def backtrack(index, groups):
+        if index == m:
+            if len(groups) == n:
+                results.append([g[:] for g in groups])
+            return
+        num = domains[index]
+
+        for group in groups:
+            if len(group) < 7:
+                group.append(num)
+                backtrack(index + 1, groups)
+                group.pop()
+
+        if len(groups) < n:
+            groups.append([num])
+            backtrack(index + 1, groups)
+            groups.pop()
+
+    backtrack(0, [])
+    
+    return results
+
+        
 def mmcm_multi_calc_fac(domains, num_mmcm):
-    # This function is used to calculate multi_mmcm factor.
+    # This function is used to calculate factor of all MMCM
 
-    name_domains = list(domains.keys())
-    num_domains = len(name_domains)
-    mmcm_map = {name_domains[0]:[]}
-
-    # calculate which clock can be generated in a single MMCM
-    push_period_lst = []
-    push_name_lst = []
-    pop_domain_dic = {}    
-    for dom_idx in range(1,num_domains):
-        push_period_lst.append(domains[name_domains[dom_idx]])
-        push_name_lst.append(name_domains[dom_idx])
-        mmcm_fac = mmcm_single_calc_fac(domains[name_domains[0]], push_period_lst)
-        if(mmcm_fac==[]):
-            if(len(push_period_lst)==1):
-                # TODO: there is a clock that can not be generate by mmcm, it needs cascade
-                # assert Error
-                return {}
-            pop_domain_dic = {**pop_domain_dic, push_name_lst.pop():push_period_lst.pop()}
-        if(len(push_name_lst)==7):
-            mmcm_map[name_domains[0]].append(["mmcm", push_name_lst, mmcm_fac])
-            push_name_lst = []
-            push_period_lst = []
+    # group clock domains
+    # [[[a,b], [c], [d,e],...]
+    #  [[a], [b,c], [d,e],...]
+    #  ...]
+    groups = partition_in_order(domains[1:], num_mmcm)
     
-    if(len(push_name_lst)!=0):
-        mmcm_map[name_domains[0]].append(["mmcm", push_name_lst, mmcm_fac])
-    
-    if(pop_domain_dic=={}):
-        if len(mmcm_map[name_domains[0]])>num_mmcm:
-            return {}
-        return mmcm_map    
+    mmcm_map = {}
+    for group in groups:
+        #mmcm_map = {domains[0][0]:[]}
+        mmcm_map_lst = []
+        for mmcm_item in group:
+            mmcm_fac = mmcm_calc_fac(domains[0][1], [_[1] for _ in mmcm_item])
+            if mmcm_fac==[]:
+                break
+            mmcm_map_lst.append(["mmcm", [_[0] for _ in mmcm_item], mmcm_fac])
+        if len(mmcm_map_lst)==num_mmcm:
+            mmcm_map[domains[0][0]] = mmcm_map_lst
+            break
 
-    later_mmcm_map  = mmcm_multi_calc_fac({name_domains[0]:domains[name_domains[0]], **pop_domain_dic}, num_mmcm)
-    mmcm_map[name_domains[0]] = mmcm_map[name_domains[0]]+later_mmcm_map[name_domains[0]]
-
-    if len(mmcm_map[name_domains[0]])>num_mmcm:
-        return {}
-    return mmcm_map 
+    return mmcm_map
