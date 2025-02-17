@@ -1,15 +1,13 @@
 # AutoClock
 
-This project open-source code of AutoClock for low-power HLS design. 
-Currently, only support Xilinx Ultrascale and Ultrascale+. 
-
-CRG.pdf illustrates an example of the output of AutoCLock.
+This project is a extension of VITIS-HLS to manage clock automatically for 
+low-power HLS design. Currently, only support Xilinx Ultrascale and Ultrascale+. 
 
 ## Features (Continuously updating)
     
-### generate CRG automatically. (done)
+### generate CRG automatically.
     
-#### PLL/MMCM/BUFGCE_DIV selection automatically
+1. PLL/MMCM/BUFGCE_DIV selection automatically
 e.g., 
 
        #pragma HLS inputclk clk_src 10
@@ -20,22 +18,15 @@ e.g.,
          module_2();
        };
 
-In this example, "clk_src" is connected to clock pin. Since the frequency of "clk1"
+In this example, "clk_src" is connected to ap_clock. Since the frequency of "clk1"
 is 1/2 of "clk_src", the BUFGCE_DIV is used to generate it. For "clk2", PLL is used.
             
-#### rst_sync
+2. rst_sync
 Reset for each clock domain will be generated automatically.
 
-#### output file:
-- Wrapper of PLL if PLL is used
-- Wrapper of MMCM if MMCM is used
-- CRG module
-
-### generate CDC circuit automatically according to INTERFACE type. (done)
+### generate CDC circuit automatically according to INTERFACE type.
         
-#### insert CDC circuits between different clock domain
-
-The CDC circuit selection depends on the INTERFACE type.
+1. Insert CDC circuits between different clock domain. The CDC circuit selection depends on the INTERFACE type.
 
 - FIFO interface: async-fifo
 - BRAM interface: async-bram 
@@ -45,25 +36,20 @@ The CDC circuit selection depends on the INTERFACE type.
     - syncronize the edge if they are pose-sensitive
   - pipe for some states because of clock domain
            
-#### original clock/reset related signals need to be updated
-
-#### output file:
-
-   CDC circuit
-
-   modified modules
+2.  Updated original clock/reset related signals 
 
 ### clock multiplexering scheme for modules instantiated by multiple clock domains
         
-#### insert clock mux to generate a new clock domain
+1. Insert clock mux to generate a new clock domain
 
-#### generate selection signals
+2. Generate selection signals
 
 ### insert clock gates 
 
-#### from high to low level 
+1. From high to low level 
         
-#### skip sub-modules of dataflow modules
+2. Skip sub-modules of dataflow modules
+
 - if a dataflow modules is well optimized for streaming, sub-modules will always run with 
   father module.
    
