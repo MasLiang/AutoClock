@@ -9,60 +9,63 @@ CRG.pdf illustrates an example of the output of AutoCLock.
     
 ### generate CRG automatically. (done)
     
-        - PLL/MMCM/BUFGCE_DIV selection automatically
-            e.g., 
-                  #pragma HLS inputclk clk_src 10
-                  void top(){
-                    #pragma HLS clkdomain clk1 20
-                    module_1();
-                    #pragma HLS clkdomain clk2 15
-                    module_2();
-                  };
-                In this example, "clk_src" is connected to clock pin. Since the frequency of "clk1"
-                is 1/2 of "clk_src", the BUFGCE_DIV is used to generate it. For "clk2", PLL is used.
-            
-        - rst_sync
-            Reset for each clock domain will be generated automatically.
+#### PLL/MMCM/BUFGCE_DIV selection automatically
+    e.g., 
 
-        - output file:
-            Wrapper of PLL if PLL is used
-            Wrapper of MMCM if MMCM is used
-            CRG module
+       #pragma HLS inputclk clk_src 10
+       void top(){
+         #pragma HLS clkdomain clk1 20
+         module_1();
+         #pragma HLS clkdomain clk2 15
+         module_2();
+       };
+
+    In this example, "clk_src" is connected to clock pin. Since the frequency of "clk1"
+    is 1/2 of "clk_src", the BUFGCE_DIV is used to generate it. For "clk2", PLL is used.
+            
+#### rst_sync
+    Reset for each clock domain will be generated automatically.
+
+#### output file:
+    Wrapper of PLL if PLL is used
+    Wrapper of MMCM if MMCM is used
+    CRG module
 
 ### generate CDC circuit automatically according to INTERFACE type. (done)
         
-        - insert CDC circuits between different clock domain
-            The CDC circuit selection depends on the INTERFACE type. 
-                - FIFO interface: async-fifo 
-                - BRAM interface: async-bram 
-                - FSM : 
-                    - set FSM at the fasest clock domain
-                    - expanding control signals
-                        - syncronize the edge if they are pose-sensitive
-                    - pipe for some states because of clock domain
-                    
-        - original clock/reset related signals need to be updated
+#### insert CDC circuits between different clock domain
+    The CDC circuit selection depends on the INTERFACE type. 
+        - FIFO interface: async-fifo 
+        - BRAM interface: async-bram 
+        - FSM : 
+            - set FSM at the fasest clock domain
+            - expanding control signals
+                - syncronize the edge if they are pose-sensitive
+            - pipe for some states because of clock domain
+               
+#### original clock/reset related signals need to be updated
 
-        - output file:
-            CDC circuit
-            modified modules
+#### output file:
+   CDC circuit
+   modified modules
 
 ### clock multiplexering scheme for modules instantiated by multiple clock domains
         
-        - insert clock mux to generate a new clock domain
+#### insert clock mux to generate a new clock domain
 
-        - generate selection signals
+#### generate selection signals
 
 ### insert clock gates 
-        - from high to low level 
+
+#### from high to low level 
         
-        - skip sub-modules of dataflow modules
-            - if a dataflow modules is well optimized for streaming, sub-modules will always run with 
-              father module.
+#### skip sub-modules of dataflow modules
+     - if a dataflow modules is well optimized for streaming, sub-modules will always run with 
+       father module.
         
-        - based on Xilinx Power Estimator
+     - based on Xilinx Power Estimator
     
-    4. modify the interface to increase the maximum frequency
+### modify the interface to increase the maximum frequency
 
 ## How to run:
         - install packages:
