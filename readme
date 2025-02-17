@@ -3,9 +3,9 @@ Currently, only support Xilinx Ultrascale and Ultrascale+.
 
 CRG.pdf illustrates an example of the output of AutoCLock.
 
-There are some features (Continuously updating)
+## Features (Continuously updating)
     
-    1. generate CRG automatically.
+#### generate CRG automatically. (done)
     
         - PLL/MMCM/BUFGCE_DIV selection automatically
             e.g., 
@@ -27,7 +27,7 @@ There are some features (Continuously updating)
             Wrapper of MMCM if MMCM is used
             CRG module
 
-    2. generate CDC circuit automatically according to INTERFACE type.
+#### generate CDC circuit automatically according to INTERFACE type. (done)
         
         - insert CDC circuits between different clock domain
             The CDC circuit selection depends on the INTERFACE type. 
@@ -45,12 +45,13 @@ There are some features (Continuously updating)
             CDC circuit
             modified modules
 
-    3. clock multiplexering scheme for modules instantiated by multiple clock domains
+#### clock multiplexering scheme for modules instantiated by multiple clock domains
+        
         - insert clock mux to generate a new clock domain
 
         - generate selection signals
 
-    4. insert clock gates 
+#### insert clock gates 
         - from high to low level 
         
         - skip sub-modules of dataflow modules
@@ -61,7 +62,7 @@ There are some features (Continuously updating)
     
     4. modify the interface to increase the maximum frequency
 
-    5. How to run:
+## How to run:
         - install packages:
             - pyverilog
 
