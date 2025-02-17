@@ -8,7 +8,8 @@ low-power HLS design. Currently, only support Xilinx Ultrascale and Ultrascale+.
 ### generate CRG automatically.
     
 1. PLL/MMCM/BUFGCE_DIV selection automatically
-e.g., 
+
+    e.g., 
 
        #pragma HLS inputclk clk_src 10
        void top(){
@@ -18,8 +19,8 @@ e.g.,
          module_2();
        };
 
-In this example, "clk_src" is connected to ap_clock. Since the frequency of "clk1"
-is 1/2 of "clk_src", the BUFGCE_DIV is used to generate it. For "clk2", PLL is used.
+    In this example, "clk_src" is connected to ap_clock. Since the frequency of "clk1"
+    is 1/2 of "clk_src", the BUFGCE_DIV is used to generate it. For "clk2", PLL is used.
             
 2. rst_sync
 Reset for each clock domain will be generated automatically.
