@@ -64,21 +64,21 @@ The CDC circuit selection depends on the INTERFACE type.
 #### from high to low level 
         
 #### skip sub-modules of dataflow modules
-     - if a dataflow modules is well optimized for streaming, sub-modules will always run with 
-       father module.
-        
-     - based on Xilinx Power Estimator
+- if a dataflow modules is well optimized for streaming, sub-modules will always run with 
+  father module.
+   
+- based on Xilinx Power Estimator
     
 ### modify the interface to increase the maximum frequency
 
 ## How to run:
-        - install packages:
-            - pyverilog
+- install packages:
+  - pyverilog
 
-        - cd to the path of a benchmark, modify the path of AutoClock
+- cd to the path of a benchmark, modify the path of AutoClock
 
-        - "make xclbin" to generate bitstream
+- "make xclbin" to generate bitstream
 
-        - "make host" to generate host.exe
+- "make host" to generate host.exe
 
-        - "host.exe -xclbin top.xclbin" to run it on FPGA
+- "host.exe -xclbin top.xclbin" to run it on FPGA
