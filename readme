@@ -1,3 +1,5 @@
+# AutoClock
+
 This project open-source code of AutoClock for low-power HLS design. 
 Currently, only support Xilinx Ultrascale and Ultrascale+. 
 
@@ -5,7 +7,7 @@ CRG.pdf illustrates an example of the output of AutoCLock.
 
 ## Features (Continuously updating)
     
-#### generate CRG automatically. (done)
+### generate CRG automatically. (done)
     
         - PLL/MMCM/BUFGCE_DIV selection automatically
             e.g., 
@@ -27,7 +29,7 @@ CRG.pdf illustrates an example of the output of AutoCLock.
             Wrapper of MMCM if MMCM is used
             CRG module
 
-#### generate CDC circuit automatically according to INTERFACE type. (done)
+### generate CDC circuit automatically according to INTERFACE type. (done)
         
         - insert CDC circuits between different clock domain
             The CDC circuit selection depends on the INTERFACE type. 
@@ -45,13 +47,13 @@ CRG.pdf illustrates an example of the output of AutoCLock.
             CDC circuit
             modified modules
 
-#### clock multiplexering scheme for modules instantiated by multiple clock domains
+### clock multiplexering scheme for modules instantiated by multiple clock domains
         
         - insert clock mux to generate a new clock domain
 
         - generate selection signals
 
-#### insert clock gates 
+### insert clock gates 
         - from high to low level 
         
         - skip sub-modules of dataflow modules
