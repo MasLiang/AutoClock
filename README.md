@@ -69,3 +69,8 @@ Reset for each clock domain will be generated automatically.
 - "make host" to generate host.exe
 
 - "host.exe -xclbin top.xclbin" to run it on FPGA
+
+
+
+
+# For those modules without clock domain configuration, by default, their frequency should be equal to the input clock.
