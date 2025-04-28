@@ -76,22 +76,34 @@ Reset for each clock domain will be generated automatically.
   - Declare the path of AutoClock
   - Before V++ -c, run AutoClock_step1.py
   - After V++ -c and before V++ -l, run AutoClock_step2.py
+
     -- root_path: the root path of the project. In this project, the top.cpp 
                   should be in root_path/kernel/.
+
     -- proj_path: the path of the hardware project. Generally, the hardware 
                   hardware project will be in a temp_dir if a similar Makefile
                   is used. Then the project_path will be temp_dir/proj_name/proj_name.
+
     -- proj_name: the name of the hardware project. e.g., "top".
+
     -- cpp_top_name: the numer of the top.cpp. e.g., "top".
+
     -- solution_name: the hardware solution name. e.g., "solution".
+
     -- xo_path: the path of the .xo file.
+
     -- rdm/dfs/bfs: gating strategy. default, all of them are disabled and a hierarchical
                     gready based strategy is used.
+
     -- gate_num: the maximum number of clock gates that can be used.
+
     -- gate_level: the maximum number of clock gates that can be cascaded. Using larger 
                    values is not recommended as it can result in larger clock skew.
+
     -- gate_enable: if clock gate is used.
+
     -- done_reg: if use a refined ap_ctrl_chain. It is recommended to use for better timing.
+
     -- cg_pipe_en : if clock enable is pipelined for better timing. It is reconmmended to 
                     use when the number of modules is large.
     
