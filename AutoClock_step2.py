@@ -37,7 +37,6 @@ parser.add_argument("--root_path", type=str, default="/Projects/jiawei/workspace
 parser.add_argument("--proj_path", type=str, default="0")
 parser.add_argument("--proj_name", type=str, default="0")
 parser.add_argument("--cpp_top_name", type=str, default="0")
-parser.add_argument("--cpp_path", type=str, default="0")
 parser.add_argument("--solution_name", type=str, default="0")
 parser.add_argument("--xo_path", type=str, default="0")
 parser.add_argument("--rdm", type=int, default=0)
@@ -55,7 +54,6 @@ proj_path = args.proj_path
 proj_name = args.proj_name
 cpp_top_name = args.cpp_top_name
 solution_name = args.solution_name
-cpp_path = args.cpp_path
 xo_path = args.xo_path
 rdm = args.rdm
 dfs = args.dfs
@@ -66,8 +64,7 @@ gate_enable = args.gate_enable
 done_flg = args.done_reg
 cg_pipe_en = args.cg_pipe_en
 
-if cpp_path=="0":
-    cpp_path = root_path+"kernel/"
+cpp_path = root_path+"kernel/"
 syn_rtl_path = proj_path+"/"+proj_name+"/"+solution_name+"/syn/verilog/"
 rpt_root_path = proj_path+"/"+proj_name+"/"+solution_name+"/syn/report/"
 

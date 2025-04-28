@@ -170,9 +170,9 @@ LPHLS_PATH := ~/workspace/AutoClock/clock/
 $(TEMP_DIR)/top.xo: $(CUR_DIR)/kernel/top.cpp 
 	$(ECHO) "Compiling Kernel: top"
 	mkdir -p $(TEMP_DIR)
-	python $(LPHLS_PATH)/lphls_step1.py $(CUR_DIR)/kernel top
+	python $(LPHLS_PATH)/AutoClock_step1.py $(CUR_DIR)/kernel top
 	$(VPP) -c $(VPP_FLAGS_top) $(VPP_FLAGS) -k top -I'$(<D)' --temp_dir $(TEMP_DIR) --report_dir $(TEMP_REPORT_DIR) -o $@ $^
-	python $(LPHLS_PATH)/lphls_step2.py --root_path=$(CUR_DIR)/ --proj_path=$(TEMP_DIR)/top/top/ --proj_name=top --cpp_top_name=top --solution_name=solution --xo_path=$(TEMP_DIR) --dfs=1 --gate_level=0
+	python $(LPHLS_PATH)/AutoClock_step2.py --root_path=$(CUR_DIR)/ --proj_path=$(TEMP_DIR)/top/top/ --proj_name=top --cpp_top_name=top --solution_name=solution --xo_path=$(TEMP_DIR) --dfs=1 --gate_level=0
     
 BINARY_CONTAINER_top_OBJS += $(TEMP_DIR)/top.xo
 BINARY_CONTAINERS_DEPS += $(BINARY_CONTAINER_top_OBJS)
