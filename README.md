@@ -21,6 +21,9 @@ low-power HLS design. Currently, only support Xilinx Ultrascale and Ultrascale+.
 
     In this example, "clk_src" is connected to ap_clock. Since the frequency of "clk1"
     is 1/2 of "clk_src", the BUFGCE_DIV is used to generate it. For "clk2", PLL is used.
+    
+    If there is not a pragma before a function call, the default clock domain will be assigned
+    with the same clock frequency with input clock.
             
 2. rst_sync
 Reset for each clock domain will be generated automatically.
