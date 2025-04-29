@@ -12,7 +12,6 @@ import os
 import copy
 import re
 import math
-import pdb
 
 def rpt_parser(module_name, rpt_root_path):
     if module_name!="top":
@@ -326,7 +325,6 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
         port_list.append([sig_ce1, sig_we1, sig_address1, sig_d1, sig_q1])
     
     # check connections of ce
-    #pdb.set_trace()
     
     for port in port_list:
         # check which module port connect directly, this port should nor be touched
@@ -444,7 +442,6 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
 
             sig = port[sig_idx].name
             flag, portarg, module = connect_to_module(port[sig_idx], main_module_list)
-            #pdb.set_trace()
             if flag:
                 # other ports need to be in the same clock domain
                 if module_map[module.module]!=clk_domain:
@@ -473,7 +470,6 @@ def modify_bram_clk(top_module_ast, inst, main_module_list, module_map, mux_alwa
             else:
                 # 4 is output of the bram, others are input
                 if sig_idx==4:
-                    #pdb.set_trace()
                     sig_mux_always = find_mux_out(port[sig_idx], mux_always_list, clk_domain)
                     decl_reg_name = port[sig_idx].name
                     decl_reg = find_reg_wire_def(decl_reg_name, DFS(top_module_ast, lambda node : isinstance(node, ast.Decl)))
@@ -1162,7 +1158,6 @@ def fsm_clk_bind(top_module_ast, assign_list, pose_always_list, mux_always_list,
                                                                                                                    ast.Identifier(case_item.cond[0].name))]))]) 
                 case_item.statement.statements = tuple([temp_statement])
      # 2025.1.3: states not only need pipe, but also need to sync for ce/we/... mux
-    pdb.set_trace()
     for state in state_to_pipe:
         state_name = state[0]
         state_clk = state[1]

@@ -76,26 +76,27 @@ def crg_gen(file):
     #print("mux_out:", mux_out_domains)
     
     # generate mmcm or pll to generate clks in domains
-    for unit_idx in range(len(clk_map_mmcm[src_clk])):
-        unit = clk_map_mmcm[src_clk][unit_idx]
-        clkin_period = domains[src_clk]
-        clkout_num = len(unit[1])
-        if unit[0] == "mmcm":
-            mmcm_name = "mmcm"+str(unit_idx)
-            lst_new_module.append(mmcm_name+".v")
-            lst_mmcm = gen_mmcme4_inst(mmcm_name,[clkin_period, clkout_num]+unit[2]+[0 for _ in range(7-clkout_num)])
-            lst_mmcm_wire += lst_mmcm[0]
-            lst_mmcm_inst += lst_mmcm[1]
-            lst_assign.append(f'''{'assign    mmcm'+str(unit_idx)+'_clk_in0':<40}=    {src_clk}_ibuf;''')
-            lst_assign.append(f'''{'assign    mmcm'+str(unit_idx)+'_reset':<40}=    ~rst_n_sys;''')
-        elif unit[0]=="pll":
-            pll_name = "pll"+str(unit_idx)
-            lst_new_module.append(pll_name+".v")
-            lst_pll = gen_plle4_inst(pll_name,[clkin_period, clkout_num]+unit[2]+[0 for _ in range(2-clkout_num)])
-            lst_assign.append(f'''{'assign    pll'+str(unit_idx)+'_clk_in0':<40}=    {src_clk}_ibuf;''')
-            lst_assign.append(f'''{'assign    pll'+str(unit_idx)+'_reset':<40}=    ~rst_n_sys;''')
-            lst_pll_wire += lst_pll[0]
-            lst_pll_inst += lst_pll[1]
+    if clk_map_mmcm!={}:
+        for unit_idx in range(len(clk_map_mmcm[src_clk])):
+            unit = clk_map_mmcm[src_clk][unit_idx]
+            clkin_period = domains[src_clk]
+            clkout_num = len(unit[1])
+            if unit[0] == "mmcm":
+                mmcm_name = "mmcm"+str(unit_idx)
+                lst_new_module.append(mmcm_name+".v")
+                lst_mmcm = gen_mmcme4_inst(mmcm_name,[clkin_period, clkout_num]+unit[2]+[0 for _ in range(7-clkout_num)])
+                lst_mmcm_wire += lst_mmcm[0]
+                lst_mmcm_inst += lst_mmcm[1]
+                lst_assign.append(f'''{'assign    mmcm'+str(unit_idx)+'_clk_in0':<40}=    {src_clk}_ibuf;''')
+                lst_assign.append(f'''{'assign    mmcm'+str(unit_idx)+'_reset':<40}=    ~rst_n_sys;''')
+            elif unit[0]=="pll":
+                pll_name = "pll"+str(unit_idx)
+                lst_new_module.append(pll_name+".v")
+                lst_pll = gen_plle4_inst(pll_name,[clkin_period, clkout_num]+unit[2]+[0 for _ in range(2-clkout_num)])
+                lst_assign.append(f'''{'assign    pll'+str(unit_idx)+'_clk_in0':<40}=    {src_clk}_ibuf;''')
+                lst_assign.append(f'''{'assign    pll'+str(unit_idx)+'_reset':<40}=    ~rst_n_sys;''')
+                lst_pll_wire += lst_pll[0]
+                lst_pll_inst += lst_pll[1]
             
             
     # gen BUFXXX according to clk_map
@@ -225,9 +226,11 @@ def crg_gen(file):
     for clk in lst_clk:
         if(clk==src_clk):
             continue
+        elif clk in clk_map_bypass:
+            lst_assign.append(f'''{'assign    rst_'+clk:<40}=    ~rst_n_sys;''')
+            continue
         elif clk in clk_map_mux:
             lst_assign.append(f'''{'assign    '+clk:<40}=    mux_{clk}_clk_out;''')
-                
         elif clk in clk_map_div:
             lst_assign.append(f'''{'assign    '+clk:<40}=    div_{clk}_o;''')
         else:
@@ -248,12 +251,13 @@ def crg_gen(file):
         lst_rst_sync_inst += lst_rst_sync[1]
         lst_rst_sync_inst += ["\n"]
         pll_fag = 0
-        for unit_idx in range(len(clk_map_mmcm[src_clk])):
-            if clk in clk_map_mmcm[src_clk][unit_idx][1]:
-                pll_fag = 1
-                break
-            else:
-                pll_fag = 0
+        if clk_map_mmcm!={}:
+            for unit_idx in range(len(clk_map_mmcm[src_clk])):
+                if clk in clk_map_mmcm[src_clk][unit_idx][1]:
+                    pll_fag = 1
+                    break
+                else:
+                    pll_fag = 0
         if pll_fag==1:
             if clk_map_mmcm[src_clk][unit_idx][0]=="pll":
                 lst_assign.append(f'''{'assign    '+clk+'_src_arst':<40}=    ~(rst_n_sys & pll{unit_idx}_locked);''')

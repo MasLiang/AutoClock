@@ -6,7 +6,6 @@ import copy
 import re
 import random
 from .rtl_parser import *
-import pdb
 
 def determain_cgen(top_module_ast, top_flg):
     # always @(posedge clk)
@@ -29,7 +28,6 @@ def determain_cgen(top_module_ast, top_flg):
     ap_start_flg = 0
     ap_start_d_lst = []
     for start_sig in all_input:
-        #pdb.set_trace() 
         if "ap_start"==start_sig.name:
             ap_start_flg = 1
     for start_d_sig in all_Decl:

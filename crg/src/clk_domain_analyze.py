@@ -1,8 +1,8 @@
 #import device_resource
 import pulp
 import itertools
-from .mmcm_fac_calc_test import *
-from .pll_fac_calc_test import *
+from .mmcm_fac_calc import *
+from .pll_fac_calc import *
 
 def bufgce_div_cal(domains):
     # This function is to find those clocks that can be 
@@ -167,6 +167,9 @@ def pll_mmcm_cal(domains):
     # s.t. n_{PLL}\in \mathbb{Z}
     # s.t. n_{MMCM}\in \mathbb{Z}
     
+
+    if len(domains.keys())==1:
+        return {}
     # device_info = [pll_number, mmcm_number, pll_power, mmcm_power, num_clock_per_pll, num_clock_per_mmcm]
     device_info = [100, 100, 0.049, 0.099, 2, 7]
 
