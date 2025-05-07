@@ -37,10 +37,10 @@ def mmcm_calc_fac(in_period, out_period):
         a_1_high_from_p = in_period
         a_1_lst = [b_1/_ for _ in range(1,16+1) if (b_1/_<a_1_high_from_p and b_1/_>a_1_low_from_p and in_period*8%(b_1/_)==0)]
         # This list is made of two list
-        #   1. factor for all output clk: [[div_fac_all, mult_fac_all,[div_fac_clk1, div_fac_clk2, ...]]
+        #   1. factor for all output clk: [div_fac_all, mult_fac_all, div_fac_clk1, div_fac_clk2, ...]
         if len(a_1_lst)!=0:
             a_1 = a_1_lst[0]
-            lst_fac = [b_1//a_1, in_period//a_1, [_/b_1 for _ in out_period]]
+            lst_fac = [b_1//a_1, in_period//a_1] + [_/b_1 for _ in out_period]
             return lst_fac
 
     if len(out_period)==1:

@@ -1,5 +1,10 @@
 import re
 import math
+import networkx as nx
+import matplotlib.pyplot as plt
+from collections import defaultdict
+from .cpp_analyzer import *
+
 
 def extract_clk_domains(file_path):
     clk_domains = []
@@ -75,7 +80,10 @@ def extract_clk_domains(file_path):
             file.write(line)
 
     top_module = list(modules.keys())[0]
-    called_funcs = analyze_cpp_file(file_path, top_module)
+    analyzer = CPPFunctionAnalyzer(file_path)
+    all_called_funcs = analyzer.analyze_function_calls(top_module)
+    called_funcs = all_called_funcs['direct_subfunctions']
+    #visualize_function_graph(graph, output_file="function_graph.png")
     for module in called_funcs:
         module_name = top_module+"_"+module
         if module_name in list(modules.keys()):
@@ -182,55 +190,3 @@ def cal_fastest_clk_map(domains):
     fastest_clk_map = [fastest_clk_domain] + fastest_clk_map
     
     return domains, fastest_clk_map 
-         
-def extract_function_body(code, function_name):
-    pattern = re.compile(
-        rf'{function_name}\s*\([^)]*\)\s*{{',
-        re.MULTILINE
-    )
-
-    match = pattern.search(code)
-    if not match:
-        print(f"Function '{function_name}' not found.")
-        return None
-
-    start_index = match.end() - 1
-    brace_count = 1
-    i = start_index + 1
-
-    while i < len(code):
-        if code[i] == '{':
-            brace_count += 1
-        elif code[i] == '}':
-            brace_count -= 1
-            if brace_count == 0:
-                return code[start_index:i+1]
-        i += 1
-
-    print("Error: Function body not properly closed with '}'")
-    return None
-
-def extract_called_functions(function_body):
-    keywords = {'if', 'for', 'while', 'switch', 'return', 'sizeof', 'catch', 'new', 'delete'}
-    pattern = re.compile(r'\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(', re.MULTILINE)
-    matches = pattern.findall(function_body)
-    called_functions = set(m for m in matches if m not in keywords)
-    return called_functions
-
-def find_called_functions_in_function(code, function_name="aaa"):
-    body = extract_function_body(code, function_name)
-    if body:
-        return extract_called_functions(body)
-    return set()
-
-def analyze_cpp_file(file_path, function_name="aaa"):
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            code = f.read()
-        return find_called_functions_in_function(code, function_name)
-    except FileNotFoundError:
-        print(f"File not found: {file_path}")
-        return set()
-    except Exception as e:
-        print(f"Error reading file: {e}")
-        return set()

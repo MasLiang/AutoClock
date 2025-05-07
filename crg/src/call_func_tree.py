@@ -42,4 +42,4 @@ def find_file_by_func(func_name):
                     file_paths.append(file_path)
     return file_paths
 
-aaa = find_file_by_func("read_all")
+aaa = find_file_by_func("../../../benchmark/P1MC_cdc/kernel/top")

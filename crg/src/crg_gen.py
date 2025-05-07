@@ -1,12 +1,14 @@
 import os
 from .template.mmcme4_adv import *
 from .template.plle4_adv import *
+from .template.plle3_adv import *
 from .template.bufgmux import *
 from .template.bufgce_div import *
 from .template.rst_sync import *
 from .clk_domain_analyze import clk_resource_cal
 from .clk_domain_extract import extract_clk_domains
 import math
+import pdb
 
 def crg_gen(file):
     modules, domains, domains_sel_if, fastest_clk_map= extract_clk_domains(file)
@@ -90,9 +92,10 @@ def crg_gen(file):
                 lst_assign.append(f'''{'assign    mmcm'+str(unit_idx)+'_clk_in0':<40}=    {src_clk}_ibuf;''')
                 lst_assign.append(f'''{'assign    mmcm'+str(unit_idx)+'_reset':<40}=    ~rst_n_sys;''')
             elif unit[0]=="pll":
+                pdb.set_trace()
                 pll_name = "pll"+str(unit_idx)
                 lst_new_module.append(pll_name+".v")
-                lst_pll = gen_plle4_inst(pll_name,[clkin_period, clkout_num]+unit[2]+[0 for _ in range(2-clkout_num)])
+                lst_pll = gen_plle3_inst(pll_name,[clkin_period, clkout_num]+unit[2]+[0 for _ in range(2-clkout_num)])
                 lst_assign.append(f'''{'assign    pll'+str(unit_idx)+'_clk_in0':<40}=    {src_clk}_ibuf;''')
                 lst_assign.append(f'''{'assign    pll'+str(unit_idx)+'_reset':<40}=    ~rst_n_sys;''')
                 lst_pll_wire += lst_pll[0]

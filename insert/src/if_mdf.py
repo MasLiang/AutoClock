@@ -5,7 +5,6 @@ import os
 import sys
 sys.path.append("../../")
 from .rtl_parser import *
-import pdb
 
 def ap_done_mdf_nocontinue(file_path, num_cycle):
     top_module_ast = rtl_parse([file_path])
@@ -28,7 +27,6 @@ def ap_done_mdf_nocontinue(file_path, num_cycle):
             f.write(line)
 
 def ap_done_mdf_nocontinue_no_int(top_module_ast, num_cycle):
-    #pdb.set_trace()
     add_decl = []
     rm_decl_name = []
     reg_lst = DFS(top_module_ast, lambda node: isinstance(node, ast.Reg))
@@ -208,7 +206,6 @@ def ap_done_mdf_nocontinue_no_int(top_module_ast, num_cycle):
     module_def.items = tuple(item_list)
 
 def ap_done_mdf_continue_int(top_module_ast, num_cycle):
-    #pdb.set_trace()
     add_decl = []
     rm_decl_name = []
     reg_lst = DFS(top_module_ast, lambda node: isinstance(node, ast.Reg))
@@ -378,7 +375,6 @@ def ap_done_mdf_continue_int(top_module_ast, num_cycle):
 
 
 def ap_done_mdf_continue(file_path, num_cycle):
-    #pdb.set_trace()
     top_module_ast = rtl_parse([file_path])
     top_module_ast = top_module_ast[0]
     add_decl = []
@@ -556,7 +552,6 @@ def ap_done_mdf_continue(file_path, num_cycle):
 
 
 def ap_ready_mdf(file_path, num_cycle):
-    #pdb.set_trace()
     top_module_ast = rtl_parse([file_path])
     top_module_ast = top_module_ast[0]
     add_decl = []
@@ -650,7 +645,6 @@ def ap_ready_mdf(file_path, num_cycle):
     item_list = list(module_def.items)
     decl_flg = 0
     decl_start_idx = 0
-    #pdb.set_trace()
     rm_decl = []
     for item_idx in range(len(item_list)):
         if decl_flg==0:
@@ -677,7 +671,6 @@ def ap_ready_mdf(file_path, num_cycle):
         item_list = item_list[0:decl_start_idx] + add_decl + item_list[decl_start_idx:]
     item_list += [new_always, new_assign]
             
-    #pdb.set_trace()
     for rm_item in rm_decl:
         item_list.remove(rm_item)
 
@@ -690,7 +683,6 @@ def ap_ready_mdf(file_path, num_cycle):
             f.write(line)
 
 def ap_start_mdf(file_path, num_cycle):
-    #pdb.set_trace()
     top_module_ast = rtl_parse([file_path])
     top_module_ast = top_module_ast[0]
 
